@@ -18,7 +18,7 @@ change public infrastructure.
       identifier (`MIT`).
 - [x] Choose the GitHub owner (`nostrapollo`) and repository
       (`nostrapollo/opengorky`).
-- [x] Add the canonical `repository`, `bugs`, and `homepage` URLs to
+- [x] Add the canonical `repository`, `bugs`, and current `homepage` URLs to
       `package.json` and README.
 - [x] Publish private security and conduct contact addresses.
 - [x] Enable private vulnerability reporting, Dependabot alerts, and branch
@@ -30,13 +30,13 @@ change public infrastructure.
 ## Website and domain
 
 - [ ] Choose and register the canonical domain.
-- [ ] Select a static-capable host; core application functionality must not
+- [x] Select a static-capable host; core application functionality must not
       depend on a hosted backend.
-- [ ] Configure HTTPS, the canonical hostname, redirects, and a custom 404.
+- [x] Configure HTTPS on the GitHub Pages hostname and a custom 404.
 - [ ] Verify OPFS/IndexedDB persistence, reload, import/export, and link opening
       on the production origin.
 - [ ] Add the domain to repository metadata and social preview assets.
-- [ ] Publish privacy language that accurately states what remains on-device.
+- [x] Publish privacy language that accurately states what remains on-device.
 
 ## Release gate
 
