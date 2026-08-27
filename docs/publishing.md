@@ -33,9 +33,10 @@ change public infrastructure.
 - [x] Select a static-capable host; core application functionality must not
       depend on a hosted backend.
 - [x] Configure HTTPS on the GitHub Pages hostname and a custom 404.
-- [ ] Verify OPFS/IndexedDB persistence, reload, import/export, and link opening
+- [x] Verify OPFS/IndexedDB persistence, reload, import/export, and link opening
       on the production origin.
-- [ ] Add the domain to repository metadata and social preview assets.
+- [ ] Add the canonical domain to repository and deployment metadata.
+- [x] Configure the GitHub social preview.
 - [x] Publish privacy language that accurately states what remains on-device.
 
 ## Release gate
