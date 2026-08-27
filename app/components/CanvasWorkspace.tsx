@@ -882,6 +882,10 @@ export function CanvasWorkspace() {
             <button className="text-button" onClick={() => void protectStorage()}>
               {storage?.persistent ? "Storage protected" : "Protect local storage"}
             </button>
+            <div className="project-links">
+              <a href="privacy/">Privacy</a>
+              <a href="https://github.com/nostrapollo/opengorky" target="_blank" rel="noreferrer">GitHub</a>
+            </div>
           </div>
         </aside>
 

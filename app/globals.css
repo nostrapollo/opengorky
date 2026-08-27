@@ -403,6 +403,89 @@ select:focus-visible {
   border-top: 1px solid var(--soft-line);
 }
 
+.project-links {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+}
+
+.project-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.project-links a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.document-page {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  padding: clamp(32px, 7vw, 88px) 20px;
+  background: var(--paper);
+}
+
+.document-page-centered {
+  display: grid;
+  place-items: center;
+}
+
+.document-page article {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: clamp(28px, 6vw, 56px);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.document-page h1 {
+  margin: 8px 0 6px;
+  font-size: clamp(34px, 7vw, 58px);
+  letter-spacing: -0.05em;
+}
+
+.document-page h2 {
+  margin: 32px 0 8px;
+  font-size: 17px;
+}
+
+.document-page p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.document-page .document-updated {
+  margin-top: 0;
+  font-size: 12px;
+}
+
+.document-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 36px 0 0;
+}
+
+.document-actions a {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 13px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.document-actions a:first-child {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
 .storage-line {
   display: flex;
   align-items: center;

@@ -5,6 +5,9 @@
 
 A free and open-source, local-first interactive canvas workspace.
 
+**[Try opengorky in your browser](https://nostrapollo.github.io/opengorky/)** —
+no account or backend required.
+
 ![opengorky showing a local-first product map](docs/assets/opengorky-preview.jpg)
 
 > **Early preview:** opengorky is an actively evolving proof of concept. Its
@@ -52,7 +55,8 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 
 No account or backend is required. Browser data is scoped to the site's origin,
 so exported JSON is the portable backup and interchange format.
-The POC is intended to run locally and has no required hosted deployment.
+The hosted build is the same static frontend as the local app; it has no
+application backend. Read the [privacy summary](app/privacy/page.tsx).
 
 ## Verify
 
@@ -78,10 +82,9 @@ for private reporting instructions.
 
 ## Publication status
 
-The repository is being prepared for a public GitHub release and a standalone
-website. The remaining owner decisions are tracked in
-[docs/publishing.md](docs/publishing.md), including the open-source license,
-canonical GitHub URL, domain, and hosting provider.
+The source repository is public and the static app is published with GitHub
+Pages. The remaining owner decisions are tracked in
+[docs/publishing.md](docs/publishing.md), including the canonical domain.
 
 ## Status
 
