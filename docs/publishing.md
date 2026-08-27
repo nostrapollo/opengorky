@@ -12,7 +12,7 @@ change public infrastructure.
   are configured.
 - Browser persistence remains local-first with portable JSON export.
 
-## Required before making the repository public
+## Public repository launch
 
 - [x] Select and commit an OSI-approved `LICENSE`; `package.json` uses its SPDX
       identifier (`MIT`).
@@ -21,7 +21,7 @@ change public infrastructure.
 - [x] Add the canonical `repository`, `bugs`, and `homepage` URLs to
       `package.json` and README.
 - [x] Publish private security and conduct contact addresses.
-- [ ] Enable private vulnerability reporting, Dependabot alerts, and branch
+- [x] Enable private vulnerability reporting, Dependabot alerts, and branch
       protection requiring CI and dependency review.
 - [x] Review and flatten the pre-public Git history after checking for
       credentials, private URLs, personal data, and non-redistributable assets.
