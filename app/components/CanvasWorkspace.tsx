@@ -661,8 +661,12 @@ export function CanvasWorkspace() {
     const anchor = window.document.createElement("a");
     anchor.href = url;
     anchor.download = exported.fileName;
+    anchor.hidden = true;
+    window.document.body.append(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setStatusMessage(`Exported ${exported.fileName}`);
   }, [document]);
 
   const importDocument = useCallback(
