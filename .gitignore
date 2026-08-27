@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.vinext/
+dist/
+.wrangler/
+coverage/
+*.log
+.DS_Store
+.env*
+!.env.example
+*.tsbuildinfo

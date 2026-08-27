@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a focused improvement to the local-first canvas.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the interaction and expected outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: local_first
+    attributes:
+      label: Local-first considerations
+      description: How should this work without an account or hosted backend?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

@@ -1,0 +1,52 @@
+{
+  "name": "opengorky",
+  "version": "0.1.0",
+  "description": "A free, local-first infinite canvas for rich visual files.",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nostrapollo/opengorky.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nostrapollo/opengorky/issues"
+  },
+  "homepage": "https://github.com/nostrapollo/opengorky#readme",
+  "keywords": [
+    "canvas",
+    "diagramming",
+    "local-first",
+    "whiteboard"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "konva": "10.2.0",
+    "lucide-react": "0.545.0",
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-server-dom-webpack": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
+    "typescript": "5.9.3",
+    "vinext": "1.0.0-beta.8",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
+  }
+}
