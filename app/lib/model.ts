@@ -1,4 +1,6 @@
-export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "rich-card" | "image" | "link";
+import { getGcpService } from "./gcpCatalog";
+
+export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "rich-card" | "image" | "link" | "gcp-service";
 export type TextAlign = "left" | "center" | "right";
 export type TextVerticalAlign = "top" | "middle" | "bottom";
 
@@ -19,6 +21,7 @@ export type CanvasObject = {
   autoGrow?: boolean;
   imageSrc?: string;
   url?: string;
+  gcpServiceId?: string;
 };
 
 export type Connector = {
@@ -59,7 +62,7 @@ export type Point = { x: number; y: number };
 
 export type LayerMove = "backward" | "forward" | "back" | "front";
 
-const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "rich-card", "image", "link"]);
+const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "rich-card", "image", "link", "gcp-service"]);
 const TEXT_ALIGNS = new Set<TextAlign>(["left", "center", "right"]);
 const TEXT_VERTICAL_ALIGNS = new Set<TextVerticalAlign>(["top", "middle", "bottom"]);
 const MAX_DOCUMENT_OBJECTS = 10_000;
@@ -234,6 +237,7 @@ export function addObject(
     "rich-card": { width: 300, height: 170, fill: "#ffffff", stroke: "#23262f", text: "Rich card\nA live DOM layer on the infinite canvas." },
     image: { width: 320, height: 240, fill: "#ffffff", stroke: "#b9bbc5", text: "Pasted image" },
     link: { width: 320, height: 132, fill: "#ffffff", stroke: "#6670d9", text: "Link" },
+    "gcp-service": { width: 156, height: 128, fill: "#ffffff", stroke: "#dadce0", text: "Google Cloud service" },
   };
   const object: CanvasObject = {
     id: makeId("obj"),
@@ -252,6 +256,25 @@ export function addObject(
   return {
     object,
     document: touchDocument({ ...document, objects: [...document.objects, object] }),
+  };
+}
+
+export function addGcpServiceObject(
+  document: CanvasDocument,
+  serviceId: string,
+  x: number,
+  y: number,
+): { document: CanvasDocument; object: CanvasObject } {
+  const service = getGcpService(serviceId);
+  if (!service) throw new Error(`Unknown Google Cloud service: ${serviceId}`);
+  const result = addObject(document, "gcp-service", x, y);
+  const object = { ...result.object, gcpServiceId: service.id, text: service.name };
+  return {
+    object,
+    document: touchDocument({
+      ...result.document,
+      objects: result.document.objects.map((item) => item.id === object.id ? object : item),
+    }),
   };
 }
 
@@ -400,6 +423,10 @@ function isImageSource(value: unknown): value is string {
     && /^data:image\/[a-z0-9.+-]+;base64,/i.test(value);
 }
 
+function isGcpServiceId(value: unknown): value is string {
+  return isBoundedString(value, MAX_IDENTIFIER_LENGTH, false) && /^[a-z0-9-]+$/.test(value);
+}
+
 function isCanvasObject(value: unknown): value is CanvasObject {
   if (!isRecord(value) || !OBJECT_KINDS.has(value.kind as ObjectKind)) return false;
   if (
@@ -420,8 +447,10 @@ function isCanvasObject(value: unknown): value is CanvasObject {
   if (value.autoGrow !== undefined && typeof value.autoGrow !== "boolean") return false;
   if (value.imageSrc !== undefined && !isImageSource(value.imageSrc)) return false;
   if (value.url !== undefined && !isSafeWebUrl(value.url)) return false;
+  if (value.gcpServiceId !== undefined && !isGcpServiceId(value.gcpServiceId)) return false;
   if (value.kind === "image" && !isImageSource(value.imageSrc)) return false;
   if (value.kind === "link" && !isSafeWebUrl(value.url)) return false;
+  if (value.kind === "gcp-service" && !isGcpServiceId(value.gcpServiceId)) return false;
   return true;
 }
 

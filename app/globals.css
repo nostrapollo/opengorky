@@ -835,6 +835,140 @@ select:focus-visible {
   color: var(--accent);
 }
 
+.gcp-pack {
+  position: absolute;
+  z-index: 22;
+  top: 62px;
+  left: 50%;
+  width: min(440px, calc(100% - 28px));
+  max-height: min(680px, calc(100% - 92px));
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 60px rgba(27, 29, 36, 0.2);
+}
+
+.gcp-pack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 16px 11px;
+}
+
+.gcp-pack-header h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.gcp-pack-search {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.gcp-pack-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(95, 103, 216, 0.12);
+}
+
+.gcp-pack-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.gcp-pack-list {
+  min-height: 140px;
+  overflow-y: auto;
+  border-top: 1px solid var(--soft-line);
+  border-bottom: 1px solid var(--soft-line);
+  padding: 4px 12px 12px;
+}
+
+.gcp-pack-category h3 {
+  margin: 13px 3px 7px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gcp-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.gcp-service-grid button {
+  min-width: 0;
+  min-height: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--soft-line);
+  border-radius: 9px;
+  padding: 9px 7px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: grab;
+}
+
+.gcp-service-grid button:hover,
+.gcp-service-grid button:focus-visible {
+  outline: 0;
+  border-color: #b9c7ed;
+  background: #f7f9ff;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.1);
+}
+
+.gcp-service-grid button:active {
+  cursor: grabbing;
+}
+
+.gcp-service-grid img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.gcp-pack-empty {
+  margin: 34px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.gcp-pack footer {
+  padding: 9px 14px 11px;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+}
+
 .canvas-statusbar {
   position: absolute;
   z-index: 12;

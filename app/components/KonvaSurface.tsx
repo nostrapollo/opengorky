@@ -10,6 +10,7 @@ import type {
   Viewport,
 } from "../lib/model";
 import { connectorEndpoints } from "../lib/model";
+import { gcpIconUrl } from "../lib/gcpCatalog";
 
 type KonvaSurfaceProps = {
   document: CanvasDocument;
@@ -90,17 +91,19 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   const cardBody = group.findOne<Konva.Text>(".card-body");
   const linkButton = group.findOne<Konva.Rect>(".link-button");
   const linkButtonLabel = group.findOne<Konva.Text>(".link-button-label");
+  const gcpIcon = group.findOne<Konva.Image>(".gcp-icon");
+  const gcpKicker = group.findOne<Konva.Text>(".gcp-kicker");
   if (!body || !label) return;
 
   body.setAttrs({
     fill: object.fill,
     stroke: object.kind === "rich-card" ? "rgba(35,38,47,0.12)" : object.stroke,
     strokeWidth: object.kind === "sticky" ? 1.5 : 2,
-    cornerRadius: object.kind === "sticky" ? 6 : object.kind === "image" ? 8 : 16,
+    cornerRadius: object.kind === "sticky" ? 6 : object.kind === "image" ? 8 : object.kind === "gcp-service" ? 12 : 16,
     shadowColor: "#15171c",
-    shadowBlur: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 12 : 0,
-    shadowOpacity: object.kind === "sticky" ? 0.12 : object.kind === "rich-card" || object.kind === "link" ? 0.08 : 0,
-    shadowOffsetY: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 6 : 0,
+    shadowBlur: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 12 : object.kind === "gcp-service" ? 8 : 0,
+    shadowOpacity: object.kind === "sticky" ? 0.12 : object.kind === "rich-card" || object.kind === "link" ? 0.08 : object.kind === "gcp-service" ? 0.06 : 0,
+    shadowOffsetY: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 6 : object.kind === "gcp-service" ? 3 : 0,
   });
   if (body instanceof Konva.Ellipse) {
     body.setAttrs({
@@ -121,18 +124,18 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
 
   label.setAttrs({
     width: Math.max(24, object.width - 32),
-    height: Math.max(24, object.height - 28),
-    x: 16,
-    y: 14,
+    height: object.kind === "gcp-service" ? 38 : Math.max(24, object.height - 28),
+    x: object.kind === "gcp-service" ? 10 : 16,
+    y: object.kind === "gcp-service" ? Math.max(70, object.height - 45) : 14,
     text: object.kind === "image" || object.kind === "rich-card" || object.kind === "link" ? "" : object.text,
     visible: object.kind !== "image" && object.kind !== "rich-card" && object.kind !== "link",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    fontSize: object.kind === "sticky" ? (object.fontSize ?? 17) : 16,
+    fontSize: object.kind === "sticky" ? (object.fontSize ?? 17) : object.kind === "gcp-service" ? 13 : 16,
     fontStyle: object.kind === "sticky" ? "normal" : "600",
     lineHeight: 1.35,
     fill: "#20222a",
     align: object.textAlign ?? (object.kind === "sticky" ? "left" : "center"),
-    verticalAlign: object.textVerticalAlign ?? (object.kind === "sticky" ? "top" : "middle"),
+    verticalAlign: object.kind === "gcp-service" ? "middle" : object.textVerticalAlign ?? (object.kind === "sticky" ? "top" : "middle"),
     wrap: "word",
     ellipsis: true,
   });
@@ -198,6 +201,28 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
     fontStyle: "700",
     fill: "#4f57bd",
   });
+  const iconSize = Math.max(24, Math.min(48, object.width - 28, object.height - 70));
+  gcpIcon?.setAttrs({
+    visible: object.kind === "gcp-service",
+    x: (object.width - iconSize) / 2,
+    y: 20,
+    width: iconSize,
+    height: iconSize,
+    image: gcpIcon.image(),
+  });
+  gcpKicker?.setAttrs({
+    visible: object.kind === "gcp-service",
+    x: 8,
+    y: 8,
+    width: Math.max(24, object.width - 16),
+    text: "GOOGLE CLOUD",
+    align: "center",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+    fontSize: 7,
+    fontStyle: "700",
+    letterSpacing: 0.7,
+    fill: "#80868b",
+  });
 }
 
 function makeGroup(object: CanvasObject) {
@@ -221,7 +246,9 @@ function makeGroup(object: CanvasObject) {
   const cardBody = new Konva.Text({ name: "card-body", listening: false });
   const linkButton = new Konva.Rect({ name: "link-button" });
   const linkButtonLabel = new Konva.Text({ name: "link-button-label", listening: false });
-  group.add(body, fold, label, cardKicker, cardTitle, cardBody, linkButton, linkButtonLabel);
+  const gcpIcon = new Konva.Image({ name: "gcp-icon", image: window.document.createElement("canvas"), listening: false });
+  const gcpKicker = new Konva.Text({ name: "gcp-kicker", listening: false });
+  group.add(body, fold, label, cardKicker, cardTitle, cardBody, linkButton, linkButtonLabel, gcpIcon, gcpKicker);
   paintGroup(group, object);
   return group;
 }
@@ -707,6 +734,16 @@ export function KonvaSurface({
           scene.objectLayer.batchDraw();
         };
         image.src = object.imageSrc;
+      }
+      if (object.kind === "gcp-service" && object.gcpServiceId && group.getAttr("gcpServiceId") !== object.gcpServiceId) {
+        group.setAttr("gcpServiceId", object.gcpServiceId);
+        const image = new window.Image();
+        image.onload = () => {
+          const imageNode = group!.findOne<Konva.Image>(".gcp-icon");
+          imageNode?.image(image);
+          scene.objectLayer.batchDraw();
+        };
+        image.src = gcpIconUrl(object.gcpServiceId);
       }
       group.draggable(tool === "select");
       group.listening(true);

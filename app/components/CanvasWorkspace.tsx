@@ -13,6 +13,7 @@ import {
   ArrowUpToLine,
   Check,
   Circle,
+  Cloud,
   Copy,
   Download,
   FolderOpen,
@@ -31,11 +32,13 @@ import {
   Trash2,
   Upload,
   Zap,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { KonvaSurface } from "./KonvaSurface";
 import {
   addObject,
+  addGcpServiceObject,
   addImageObject,
   addLinkObject,
   createBlankDocument,
@@ -67,6 +70,12 @@ import {
   saveDocument,
   storageDetails,
 } from "../lib/persistence";
+import {
+  GCP_CATEGORIES,
+  GCP_SERVICES,
+  gcpIconUrl,
+  searchGcpServices,
+} from "../lib/gcpCatalog";
 
 type SaveState = "loading" | "saving" | "saved" | "error";
 
@@ -215,6 +224,8 @@ export function CanvasWorkspace() {
   const [size, setSize] = useState({ width: 900, height: 700 });
   const [saveState, setSaveState] = useState<SaveState>("loading");
   const [query, setQuery] = useState("");
+  const [gcpQuery, setGcpQuery] = useState("");
+  const [gcpPanelOpen, setGcpPanelOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
@@ -336,6 +347,8 @@ export function CanvasWorkspace() {
     return entries.filter((entry) => entry.searchableText.includes(normalized));
   }, [entries, query]);
 
+  const filteredGcpServices = useMemo(() => searchGcpServices(gcpQuery), [gcpQuery]);
+
   const selectedTextShape = useMemo(() => {
     if (selectedIds.length !== 1) return null;
     return document?.objects.find((object) =>
@@ -432,6 +445,35 @@ export function CanvasWorkspace() {
     },
     [commitDocument, document],
   );
+
+  const placeGcpService = useCallback((serviceId: string, point?: { x: number; y: number }) => {
+    if (!document) return;
+    const width = 156;
+    const height = 128;
+    const center = point ?? {
+      x: (size.width / 2 - viewport.x) / viewport.scale,
+      y: (size.height / 2 - viewport.y) / viewport.scale,
+    };
+    const result = addGcpServiceObject(document, serviceId, center.x - width / 2, center.y - height / 2);
+    commitDocument(result.document);
+    setSelectedIds([result.object.id]);
+    setEditingId(null);
+    setTool("select");
+    const service = GCP_SERVICES.find((item) => item.id === serviceId);
+    setStatusMessage(`Added ${service?.name ?? "Google Cloud service"}`);
+  }, [commitDocument, document, size.height, size.width, viewport.scale, viewport.x, viewport.y]);
+
+  const dropGcpService = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    const serviceId = event.dataTransfer.getData("application/x-opengorky-gcp-service");
+    if (!serviceId || !GCP_SERVICES.some((service) => service.id === serviceId)) return;
+    event.preventDefault();
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    placeGcpService(serviceId, {
+      x: (event.clientX - bounds.left - viewport.x) / viewport.scale,
+      y: (event.clientY - bounds.top - viewport.y) / viewport.scale,
+    });
+  }, [placeGcpService, viewport.scale, viewport.x, viewport.y]);
 
   const handleTransform = useCallback(
     (objectId: string, patch: Partial<CanvasObject>) => {
@@ -639,6 +681,7 @@ export function CanvasWorkspace() {
         event.preventDefault();
         fitAllContent();
       }
+      if (event.key === "Escape" && gcpPanelOpen) setGcpPanelOpen(false);
       const shortcuts: Record<string, Tool> = {
         v: "select",
         h: "hand",
@@ -651,7 +694,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [deleteSelected, fitAllContent, selectedIds.length]);
+  }, [deleteSelected, fitAllContent, gcpPanelOpen, selectedIds.length]);
 
   const exportDocument = useCallback(() => {
     if (!document) return;
@@ -926,9 +969,91 @@ export function CanvasWorkspace() {
                   </span>
                 );
               })}
+              <span className="tool-slot tool-with-divider" data-tooltip="Google Cloud architecture pack">
+                <button
+                  className={`tool-button ${gcpPanelOpen ? "active" : ""}`}
+                  aria-label="Google Cloud architecture pack"
+                  aria-expanded={gcpPanelOpen}
+                  aria-controls="gcp-architecture-pack"
+                  onClick={() => {
+                    setGcpPanelOpen((current) => !current);
+                    setConnectorSource(null);
+                    setStatusMessage("Google Cloud architecture pack");
+                  }}
+                >
+                  <Cloud size={18} />
+                </button>
+              </span>
           </nav>
 
-          <div ref={canvasRef} className="canvas-viewport">
+          {gcpPanelOpen && (
+            <section id="gcp-architecture-pack" className="gcp-pack" aria-label="Google Cloud architecture pack">
+              <header className="gcp-pack-header">
+                <div>
+                  <span className="eyebrow">Architecture pack</span>
+                  <h2>Google Cloud</h2>
+                </div>
+                <button className="icon-button" aria-label="Close Google Cloud architecture pack" onClick={() => setGcpPanelOpen(false)}>
+                  <X size={16} />
+                </button>
+              </header>
+              <label className="gcp-pack-search">
+                <Search size={15} />
+                <input
+                  autoFocus
+                  value={gcpQuery}
+                  onChange={(event) => setGcpQuery(event.target.value)}
+                  placeholder="Search services, e.g. database"
+                  aria-label="Search Google Cloud services"
+                />
+              </label>
+              <div className="gcp-pack-list">
+                {GCP_CATEGORIES.map((category) => {
+                  const services = filteredGcpServices.filter((service) => service.category === category);
+                  if (services.length === 0) return null;
+                  return (
+                    <section className="gcp-pack-category" key={category}>
+                      <h3>{category}</h3>
+                      <div className="gcp-service-grid">
+                        {services.map((service) => (
+                          <button
+                            key={service.id}
+                            draggable
+                            title={`Add ${service.name}`}
+                            onClick={() => placeGcpService(service.id)}
+                            onDragStart={(event) => {
+                              event.dataTransfer.effectAllowed = "copy";
+                              event.dataTransfer.setData("application/x-opengorky-gcp-service", service.id);
+                              event.dataTransfer.setData("text/plain", service.name);
+                            }}
+                          >
+                            <img src={gcpIconUrl(service.id)} alt="" draggable={false} />
+                            <span>{service.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+                {filteredGcpServices.length === 0 && (
+                  <p className="gcp-pack-empty">No Google Cloud services match “{gcpQuery}”.</p>
+                )}
+              </div>
+              <footer>Click to add at the center, or drag a service onto the canvas.</footer>
+            </section>
+          )}
+
+          <div
+            ref={canvasRef}
+            className="canvas-viewport"
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes("application/x-opengorky-gcp-service")) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }
+            }}
+            onDrop={dropGcpService}
+          >
             <div
               className="canvas-grid-background"
               style={{

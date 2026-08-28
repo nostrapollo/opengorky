@@ -49,6 +49,7 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 - drag-to-size shape creation in any direction, with live bounds preview
 - canvas-native shapes alongside editable, accessible DOM objects
 - clipboard image paste with native canvas selection, resize, rotation, and persistence
+- a searchable Google Cloud architecture pack with draggable, connectable service nodes
 - a searchable local file library with create, duplicate, delete, and navigation
 - autosave to origin-private files (OPFS), with IndexedDB fallback
 - portable JSON import and export
@@ -70,6 +71,7 @@ npm run build
 
 - [CycloneDX software bill of materials](docs/sbom.cdx.json)
 - [Third-party dependency license inventory](docs/third-party-licenses.md)
+- [Google Cloud architecture pack and artwork provenance](docs/architecture/gcp-pack.md)
 
 ## Contributing
 
