@@ -71,8 +71,7 @@ export function getGcpService(serviceId: string) {
 }
 
 export function gcpIconUrl(serviceId: string) {
-  const base = import.meta.env.BASE_URL || "/";
-  return `${base}gcp-icons/${serviceId}.svg`;
+  return `gcp-icons/${serviceId}.svg`;
 }
 
 export function searchGcpServices(query: string) {

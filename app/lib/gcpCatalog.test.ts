@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { GCP_CATEGORIES, GCP_SERVICES, getGcpService, searchGcpServices } from "./gcpCatalog";
+import { GCP_CATEGORIES, GCP_SERVICES, gcpIconUrl, getGcpService, searchGcpServices } from "./gcpCatalog";
 
 describe("Google Cloud architecture catalog", () => {
   it("has unique service IDs and a checked-in icon for every service", () => {
@@ -19,5 +19,14 @@ describe("Google Cloud architecture catalog", () => {
       expect.arrayContaining(["cloud-run", "cloud-functions"]),
     );
     expect(getGcpService("bigquery")?.name).toBe("BigQuery");
+  });
+
+  it("uses a deployment-base-relative icon URL", () => {
+    expect(gcpIconUrl("cloud-run")).toBe("gcp-icons/cloud-run.svg");
+    expect(gcpIconUrl("cloud-run")).not.toMatch(/^\//);
+    expect(new URL(gcpIconUrl("cloud-run"), "https://nostrapollo.github.io/opengorky/?qa=1").pathname)
+      .toBe("/opengorky/gcp-icons/cloud-run.svg");
+    expect(new URL(gcpIconUrl("cloud-run"), "https://opengorky.example/").pathname)
+      .toBe("/gcp-icons/cloud-run.svg");
   });
 });

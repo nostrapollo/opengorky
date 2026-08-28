@@ -235,6 +235,7 @@ export function CanvasWorkspace() {
   const [fps, setFps] = useState(60);
   const [statusMessage, setStatusMessage] = useState("Preparing local workspace…");
   const canvasRef = useRef<HTMLDivElement>(null);
+  const gcpPackButtonRef = useRef<HTMLButtonElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const lastSavedRef = useRef("");
   const loadedRef = useRef(false);
@@ -668,8 +669,18 @@ export function CanvasWorkspace() {
     setStatusMessage("Fit all content");
   }, [document, size.height, size.width]);
 
+  const closeGcpPanel = useCallback(() => {
+    setGcpPanelOpen(false);
+    window.requestAnimationFrame(() => gcpPackButtonRef.current?.focus());
+  }, []);
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && gcpPanelOpen) {
+        event.preventDefault();
+        closeGcpPanel();
+        return;
+      }
       const target = event.target as HTMLElement | null;
       const editing = target?.matches("input, textarea, [contenteditable='true']");
       if (editing) return;
@@ -681,7 +692,6 @@ export function CanvasWorkspace() {
         event.preventDefault();
         fitAllContent();
       }
-      if (event.key === "Escape" && gcpPanelOpen) setGcpPanelOpen(false);
       const shortcuts: Record<string, Tool> = {
         v: "select",
         h: "hand",
@@ -694,7 +704,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [deleteSelected, fitAllContent, gcpPanelOpen, selectedIds.length]);
+  }, [closeGcpPanel, deleteSelected, fitAllContent, gcpPanelOpen, selectedIds.length]);
 
   const exportDocument = useCallback(() => {
     if (!document) return;
@@ -971,6 +981,7 @@ export function CanvasWorkspace() {
               })}
               <span className="tool-slot tool-with-divider" data-tooltip="Google Cloud architecture pack">
                 <button
+                  ref={gcpPackButtonRef}
                   className={`tool-button ${gcpPanelOpen ? "active" : ""}`}
                   aria-label="Google Cloud architecture pack"
                   aria-expanded={gcpPanelOpen}
@@ -993,7 +1004,7 @@ export function CanvasWorkspace() {
                   <span className="eyebrow">Architecture pack</span>
                   <h2>Google Cloud</h2>
                 </div>
-                <button className="icon-button" aria-label="Close Google Cloud architecture pack" onClick={() => setGcpPanelOpen(false)}>
+                <button className="icon-button" aria-label="Close Google Cloud architecture pack" onClick={closeGcpPanel}>
                   <X size={16} />
                 </button>
               </header>

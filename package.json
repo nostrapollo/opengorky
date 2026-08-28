@@ -25,7 +25,7 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
-    "build:pages": "npm run build && node scripts/prepare-pages.mjs /opengorky",
+    "build:pages": "npm run build && node scripts/prepare-pages.mjs /opengorky && node scripts/verify-pages.mjs",
     "start": "vinext start",
     "test": "vitest run",
     "test:watch": "vitest",
