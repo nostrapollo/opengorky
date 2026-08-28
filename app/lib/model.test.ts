@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addObject,
+  addGcpServiceObject,
   addImageObject,
   addLinkObject,
   createBlankDocument,
@@ -173,6 +174,32 @@ describe("canvas document model", () => {
       y: 30,
     });
     expect(isCanvasDocument(JSON.parse(JSON.stringify(result.document)))).toBe(true);
+  });
+
+  it("stores a Google Cloud service as a native portable canvas object", () => {
+    const result = addGcpServiceObject(createBlankDocument(), "cloud-run", 120, 80);
+    const restored = normalizeCanvasDocument(JSON.parse(JSON.stringify(result.document)));
+
+    expect(result.object).toMatchObject({
+      kind: "gcp-service",
+      gcpServiceId: "cloud-run",
+      text: "Cloud Run",
+      x: 120,
+      y: 80,
+      width: 156,
+      height: 128,
+    });
+    expect(restored).toEqual(result.document);
+    expect(isCanvasDocument(restored)).toBe(true);
+  });
+
+  it("rejects Google Cloud objects without a service identity", () => {
+    const added = addObject(createBlankDocument(), "gcp-service", 20, 30);
+    expect(isCanvasDocument(added.document)).toBe(false);
+    expect(isCanvasDocument({
+      ...added.document,
+      objects: [{ ...added.object, gcpServiceId: "../../private" }],
+    })).toBe(false);
   });
 
   it("persists forward, backward, front, and back layer ordering", () => {

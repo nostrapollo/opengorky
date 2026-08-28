@@ -4,6 +4,12 @@ Generated from the installed dependency tree for the current `package-lock.json`
 This inventory identifies declared licenses; package distributions contain the canonical license texts.
 Regenerate this file and `docs/sbom.cdx.json` whenever dependencies change.
 
+## Google Cloud icon artwork
+
+The SVG files in `public/gcp-icons` are sourced from Google's official [Cloud icon library](https://cloud.google.com/icons), using current core-product artwork where available and Google's official legacy archive for the remaining service icons. Google Cloud product names, logos, and artwork are trademarks or brand assets of Google LLC. They are included for architecture-diagram use and are not licensed under this repository's MIT License. Use of the artwork remains subject to Google's applicable brand and trademark terms.
+
+## Package inventory
+
 | Package | Version | Declared license |
 | --- | --- | --- |
 | [@img/colour](https://www.npmjs.com/package/%40img%2Fcolour) | 1.1.0 | MIT |

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addObject, createBlankDocument, updateObject, type CanvasDocument } from "./model";
+import { addGcpServiceObject, addObject, createBlankDocument, updateObject, type CanvasDocument } from "./model";
 import {
   CANVAS_EXPORT_MIME_TYPE,
   MAX_CANVAS_IMPORT_BYTES,
@@ -120,6 +120,19 @@ describe("canvas import and export", () => {
       now: () => source.updatedAt,
     });
 
+    expect(imported).toEqual(source);
+  });
+
+  it("round-trips Google Cloud service nodes through export and import", () => {
+    const source = addGcpServiceObject(createBlankDocument("GCP plan"), "cloud-sql", 180, 220).document;
+    const exported = createCanvasExport(source);
+    const imported = parseCanvasImport(exported.contents, [], { now: () => source.updatedAt });
+
+    expect(imported.objects[0]).toMatchObject({
+      kind: "gcp-service",
+      gcpServiceId: "cloud-sql",
+      text: "Cloud SQL",
+    });
     expect(imported).toEqual(source);
   });
 });
