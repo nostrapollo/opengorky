@@ -25,6 +25,7 @@ type KonvaSurfaceProps = {
   processShape: ProcessShapeKind;
   viewport: Viewport;
   selectedIds: string[];
+  editingId: string | null;
   onViewportChange: (viewport: Viewport) => void;
   onSelect: (objectIds: string[]) => void;
   onObjectActivate: (objectId: string) => void;
@@ -327,6 +328,7 @@ export function KonvaSurface({
   processShape,
   viewport,
   selectedIds,
+  editingId,
   onViewportChange,
   onSelect,
   onObjectActivate,
@@ -767,6 +769,7 @@ export function KonvaSurface({
         group.on("transformend", syncTransformGeometry);
       }
       paintGroup(group, object);
+      group.findOne<Konva.Text>(".label")?.visible(object.id !== editingId);
       group.zIndex(objectIndex);
       if (object.kind === "image" && object.imageSrc && group.getAttr("imageSrc") !== object.imageSrc) {
         group.setAttr("imageSrc", object.imageSrc);
@@ -821,7 +824,7 @@ export function KonvaSurface({
 
     scene.objectLayer.batchDraw();
     updateConnectorPositions(scene, document);
-  }, [document, tool]);
+  }, [document, editingId, tool]);
 
   useEffect(() => {
     const scene = sceneRef.current;
