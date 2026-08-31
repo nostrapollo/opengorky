@@ -834,13 +834,10 @@ export function KonvaSurface({
       const node = scene.nodes.get(id);
       return node ? [node] : [];
     });
-    const selectedText = selectedIds.length === 1 && document.objects.some(
-      (object) => object.id === selectedIds[0] && object.kind === "text",
-    );
-    scene.transformer.keepRatio(!selectedText);
+    scene.transformer.keepRatio(selectedIds.length > 1);
     scene.transformer.nodes(nodes);
     scene.selectionLayer.batchDraw();
-  }, [document, selectedIds]);
+  }, [selectedIds]);
 
   return (
     <div
