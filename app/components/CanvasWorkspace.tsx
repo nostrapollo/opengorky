@@ -85,7 +85,6 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; icon: typeof MousePointer2;
   { tool: "rectangle", label: "Rectangle", icon: RectangleHorizontal, shortcut: "R" },
   { tool: "ellipse", label: "Ellipse", icon: Circle, shortcut: "O" },
   { tool: "sticky", label: "Sticky note", icon: StickyNote, shortcut: "N" },
-  { tool: "rich-card", label: "Rich card", icon: Zap },
   { tool: "connector", label: "Connect", icon: ArrowRight, shortcut: "C" },
 ];
 

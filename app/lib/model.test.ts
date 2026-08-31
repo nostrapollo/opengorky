@@ -5,6 +5,7 @@ import {
   addImageObject,
   addLinkObject,
   createBlankDocument,
+  createDemoDocument,
   connectorEndpoints,
   deleteObject,
   deleteObjects,
@@ -18,6 +19,15 @@ import {
 } from "./model";
 
 describe("canvas document model", () => {
+  it("keeps rich cards out of newly seeded canvases", () => {
+    expect(createDemoDocument().objects.some((object) => object.kind === "rich-card")).toBe(false);
+  });
+
+  it("continues accepting rich cards from existing saved canvases", () => {
+    const legacy = addObject(createBlankDocument(), "rich-card", 40, 50).document;
+    expect(isCanvasDocument(JSON.parse(JSON.stringify(legacy)))).toBe(true);
+  });
+
   it("adds, updates, indexes, and deletes objects without renderer state", () => {
     const blank = createBlankDocument("Research map");
     const added = addObject(blank, "sticky", 40, 80);
