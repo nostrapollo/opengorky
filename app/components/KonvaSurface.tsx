@@ -145,20 +145,21 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   const textInsets = object.kind === "process-shape" && object.processShape
     ? processShapeTextInsets(object.processShape, object.width, object.height)
     : null;
+  const plainText = object.kind === "text";
   label.setAttrs({
-    width: textInsets?.width ?? Math.max(24, object.width - 32),
-    height: textInsets?.height ?? (object.kind === "gcp-service" ? 38 : Math.max(24, object.height - 28)),
-    x: textInsets?.x ?? (object.kind === "gcp-service" ? 10 : 16),
-    y: textInsets?.y ?? (object.kind === "gcp-service" ? Math.max(70, object.height - 45) : 14),
+    width: plainText ? object.width : textInsets?.width ?? Math.max(24, object.width - 32),
+    height: plainText ? object.height : textInsets?.height ?? (object.kind === "gcp-service" ? 38 : Math.max(24, object.height - 28)),
+    x: plainText ? 0 : textInsets?.x ?? (object.kind === "gcp-service" ? 10 : 16),
+    y: plainText ? 0 : textInsets?.y ?? (object.kind === "gcp-service" ? Math.max(70, object.height - 45) : 14),
     text: object.kind === "image" || object.kind === "rich-card" || object.kind === "link" ? "" : object.text,
     visible: object.kind !== "image" && object.kind !== "rich-card" && object.kind !== "link",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    fontSize: object.kind === "sticky" ? (object.fontSize ?? 17) : object.kind === "gcp-service" ? 13 : 16,
-    fontStyle: object.kind === "sticky" ? "normal" : "600",
+    fontSize: object.kind === "sticky" ? (object.fontSize ?? 17) : plainText ? (object.fontSize ?? 18) : object.kind === "gcp-service" ? 13 : 16,
+    fontStyle: object.kind === "sticky" || plainText ? "normal" : "600",
     lineHeight: 1.35,
     fill: "#20222a",
-    align: object.textAlign ?? (object.kind === "sticky" ? "left" : "center"),
-    verticalAlign: object.kind === "gcp-service" ? "middle" : object.textVerticalAlign ?? (object.kind === "sticky" ? "top" : "middle"),
+    align: object.textAlign ?? (object.kind === "sticky" || plainText ? "left" : "center"),
+    verticalAlign: object.kind === "gcp-service" ? "middle" : object.textVerticalAlign ?? (object.kind === "sticky" || plainText ? "top" : "middle"),
     wrap: "word",
     ellipsis: true,
   });
@@ -606,6 +607,9 @@ export function KonvaSurface({
       if (SHAPE_TOOLS.includes(currentTool as ObjectKind)) {
         const point = stagePoint(stage);
         if (point) propsRef.current.onCreate(currentTool as ObjectKind, point.x, point.y);
+      } else if (currentTool === "text") {
+        const point = stagePoint(stage);
+        if (point) propsRef.current.onCreate("text", point.x, point.y);
       } else {
         propsRef.current.onSelect([]);
       }
@@ -635,6 +639,8 @@ export function KonvaSurface({
         ? "grab"
         : SHAPE_TOOLS.includes(tool as ObjectKind)
           ? "crosshair"
+          : tool === "text"
+            ? "text"
           : "default";
     scene.stage.batchDraw();
   }, [tool, viewport]);
@@ -822,7 +828,8 @@ export function KonvaSurface({
     if (!scene) return;
     const nodes = selectedIds.flatMap((id) => {
       const node = scene.nodes.get(id);
-      return node ? [node] : [];
+      const object = document.objects.find((item) => item.id === id);
+      return node && object?.kind !== "text" ? [node] : [];
     });
     scene.transformer.nodes(nodes);
     scene.selectionLayer.batchDraw();

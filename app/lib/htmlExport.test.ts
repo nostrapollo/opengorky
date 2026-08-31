@@ -37,6 +37,8 @@ describe("standalone HTML canvas export", () => {
     document = rectangle.document;
     document = addObject(document, "ellipse", 220, 0).document;
     document = addObject(document, "sticky", 440, 0).document;
+    const text = addObject(document, "text", 680, 0);
+    document = updateObject(text.document, text.object.id, { text: "Standalone text" });
     document = addObject(document, "rich-card", 0, 190).document;
     document = addImageObject(document, "data:image/png;base64,abc", 340, 190, 160, 120, "diagram.png").document;
     document = addLinkObject(document, "https://example.com/docs", 540, 190).document;
@@ -48,7 +50,7 @@ describe("standalone HTML canvas export", () => {
     };
     const exported = createCanvasHtmlExport(document);
 
-    for (const kind of ["rectangle", "ellipse", "sticky", "rich-card", "image", "link", "gcp-service", "process-shape"]) {
+    for (const kind of ["rectangle", "ellipse", "sticky", "text", "rich-card", "image", "link", "gcp-service", "process-shape"]) {
       expect(exported.contents).toContain(`kind-${kind}`);
     }
     expect(exported.contents).toContain('marker-end="url(#arrow-0)"');

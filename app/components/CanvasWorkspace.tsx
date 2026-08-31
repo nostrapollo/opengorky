@@ -31,6 +31,7 @@ import {
   StickyNote,
   TextAlignCenter,
   Trash2,
+  Type,
   Upload,
   Zap,
   X,
@@ -93,6 +94,7 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; icon: typeof MousePointer2;
   { tool: "rectangle", label: "Rectangle", icon: RectangleHorizontal, shortcut: "R" },
   { tool: "ellipse", label: "Ellipse", icon: Circle, shortcut: "O" },
   { tool: "sticky", label: "Sticky note", icon: StickyNote, shortcut: "N" },
+  { tool: "text", label: "Text", icon: Type, shortcut: "T" },
   { tool: "connector", label: "Connect", icon: ArrowRight, shortcut: "C" },
 ];
 
@@ -173,7 +175,7 @@ function shapeToolbarStyle(
     [0, object.height],
   ].map(([x, y]) => object.y + x * Math.sin(angle) + y * Math.cos(angle));
   const objectTop = viewport.y + Math.min(...corners) * viewport.scale;
-  const estimatedWidth = object.kind === "sticky" ? 490 : 250;
+  const estimatedWidth = object.kind === "sticky" ? 490 : object.kind === "text" ? 420 : 250;
   const sideGap = 28;
   const edgeGap = 12;
   const bottom = Math.max(54, objectTop - 12);
@@ -192,14 +194,16 @@ function shapeToolbarStyle(
 }
 
 function textEditorPaddingTop(object: CanvasObject) {
-  const verticalAlign = object.textVerticalAlign ?? (object.kind === "sticky" ? "top" : "middle");
-  if (verticalAlign === "top") return 14;
-  const fontSize = object.kind === "sticky" ? object.fontSize ?? 17 : 17;
+  const plainText = object.kind === "text";
+  const verticalAlign = object.textVerticalAlign ?? (object.kind === "sticky" || plainText ? "top" : "middle");
+  const edgePadding = plainText ? 0 : 14;
+  if (verticalAlign === "top") return edgePadding;
+  const fontSize = object.kind === "sticky" ? object.fontSize ?? 17 : plainText ? object.fontSize ?? 18 : 17;
   const lineCount = Math.max(1, object.text.split("\n").length);
   const textHeight = lineCount * fontSize * 1.35;
   return verticalAlign === "bottom"
-    ? Math.max(14, object.height - textHeight - 14)
-    : Math.max(14, (object.height - textHeight) / 2);
+    ? Math.max(edgePadding, object.height - textHeight - edgePadding)
+    : Math.max(edgePadding, (object.height - textHeight) / 2);
 }
 
 async function readClipboardImage(file: File) {
@@ -388,7 +392,7 @@ export function CanvasWorkspace() {
   const selectedTextShape = useMemo(() => {
     if (selectedIds.length !== 1) return null;
     return document?.objects.find((object) =>
-      object.id === selectedIds[0] && ["rectangle", "ellipse", "sticky", "process-shape"].includes(object.kind),
+      object.id === selectedIds[0] && ["rectangle", "ellipse", "sticky", "text", "process-shape"].includes(object.kind),
     ) ?? null;
   }, [document, selectedIds]);
 
@@ -474,7 +478,7 @@ export function CanvasWorkspace() {
       commitDocument(result.document);
       setSelectedIds([result.object.id]);
       setTool("select");
-      if (kind === "sticky" || kind === "rich-card") setEditingId(result.object.id);
+      if (kind === "sticky" || kind === "text" || kind === "rich-card") setEditingId(result.object.id);
     },
     [commitDocument, document, processShape],
   );
@@ -740,6 +744,7 @@ export function CanvasWorkspace() {
         r: "rectangle",
         o: "ellipse",
         n: "sticky",
+        t: "text",
         c: "connector",
       };
       if (shortcuts[event.key.toLowerCase()]) setTool(shortcuts[event.key.toLowerCase()]);
@@ -1255,7 +1260,7 @@ export function CanvasWorkspace() {
               {editingId && document.objects.filter((object) => object.id === editingId && object.kind !== "rich-card" && object.kind !== "image" && object.kind !== "link").map((object) => (
                 <textarea
                   key={object.id}
-                  className="canvas-text-editor"
+                  className={`canvas-text-editor ${object.kind === "text" ? "plain-text-editor" : ""}`}
                   autoFocus
                   value={object.text}
                   aria-label="Object text"
@@ -1263,18 +1268,24 @@ export function CanvasWorkspace() {
                     width: object.width,
                     height: object.height,
                     background: object.fill,
-                    fontSize: object.kind === "sticky" ? object.fontSize ?? 17 : 17,
-                    textAlign: object.textAlign ?? (object.kind === "sticky" ? "left" : "center"),
+                    fontSize: object.kind === "sticky" ? object.fontSize ?? 17 : object.kind === "text" ? object.fontSize ?? 18 : 17,
+                    textAlign: object.textAlign ?? (object.kind === "sticky" || object.kind === "text" ? "left" : "center"),
                     paddingTop: textEditorPaddingTop(object),
                     transform: `translate(${viewport.x + object.x * viewport.scale}px, ${viewport.y + object.y * viewport.scale}px) scale(${viewport.scale}) rotate(${object.rotation}deg)`,
                     transformOrigin: "top left",
                   }}
-                  placeholder={object.kind === "sticky" ? "Type something…" : undefined}
+                  placeholder={object.kind === "sticky" || object.kind === "text" ? "Type something…" : undefined}
                   onChange={(event) => handleObjectTextChange(object, event.target.value)}
                   onPointerDown={(event) => {
                     startMiddleViewportPan(event);
                   }}
-                  onBlur={() => setEditingId(null)}
+                  onBlur={() => {
+                    if (object.kind === "text" && !object.text.trim()) {
+                      setDocument((current) => current ? deleteObjects(current, [object.id]) : current);
+                      setSelectedIds([]);
+                    }
+                    setEditingId(null);
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                       event.preventDefault();
@@ -1282,7 +1293,7 @@ export function CanvasWorkspace() {
                       return;
                     }
                     if (event.key === "Escape") {
-                      if (object.kind === "sticky" && !object.text.trim()) {
+                      if ((object.kind === "sticky" || object.kind === "text") && !object.text.trim()) {
                         setDocument((current) => current ? deleteObjects(current, [object.id]) : current);
                         setSelectedIds([]);
                       }
@@ -1316,13 +1327,15 @@ export function CanvasWorkspace() {
                     ))}
                   </div>
                   <span className="shape-toolbar-divider" />
-                  {[15, 17, 21].map((fontSize) => (
+                </>}
+                {(selectedTextShape.kind === "sticky" || selectedTextShape.kind === "text") && <>
+                  {(selectedTextShape.kind === "sticky" ? [15, 17, 21] : [14, 18, 24, 32]).map((fontSize) => (
                     <button
                       key={fontSize}
-                      className={`sticky-text-size ${(selectedTextShape.fontSize ?? 17) === fontSize ? "active" : ""}`}
+                      className={`sticky-text-size ${(selectedTextShape.fontSize ?? (selectedTextShape.kind === "text" ? 18 : 17)) === fontSize ? "active" : ""}`}
                       style={{ fontSize }}
-                      aria-label={`Set sticky text size ${fontSize}`}
-                      aria-pressed={(selectedTextShape.fontSize ?? 17) === fontSize}
+                      aria-label={`Set text size ${fontSize}`}
+                      aria-pressed={(selectedTextShape.fontSize ?? (selectedTextShape.kind === "text" ? 18 : 17)) === fontSize}
                       title={`Text size ${fontSize}`}
                       onClick={() => handleTransform(selectedTextShape.id, { fontSize })}
                     >
@@ -1338,9 +1351,9 @@ export function CanvasWorkspace() {
                 ] as const).map(([alignment, Icon, label]) => (
                   <button
                     key={alignment}
-                    className={(selectedTextShape.textAlign ?? (selectedTextShape.kind === "sticky" ? "left" : "center")) === alignment ? "active" : ""}
+                    className={(selectedTextShape.textAlign ?? (selectedTextShape.kind === "sticky" || selectedTextShape.kind === "text" ? "left" : "center")) === alignment ? "active" : ""}
                     aria-label={label}
-                    aria-pressed={(selectedTextShape.textAlign ?? (selectedTextShape.kind === "sticky" ? "left" : "center")) === alignment}
+                    aria-pressed={(selectedTextShape.textAlign ?? (selectedTextShape.kind === "sticky" || selectedTextShape.kind === "text" ? "left" : "center")) === alignment}
                     title={label}
                     onClick={() => handleTransform(selectedTextShape.id, { textAlign: alignment as TextAlign })}
                   ><Icon size={15} /></button>
@@ -1353,9 +1366,9 @@ export function CanvasWorkspace() {
                 ] as const).map(([alignment, Icon, label]) => (
                   <button
                     key={alignment}
-                    className={(selectedTextShape.textVerticalAlign ?? (selectedTextShape.kind === "sticky" ? "top" : "middle")) === alignment ? "active" : ""}
+                    className={(selectedTextShape.textVerticalAlign ?? (selectedTextShape.kind === "sticky" || selectedTextShape.kind === "text" ? "top" : "middle")) === alignment ? "active" : ""}
                     aria-label={label}
-                    aria-pressed={(selectedTextShape.textVerticalAlign ?? (selectedTextShape.kind === "sticky" ? "top" : "middle")) === alignment}
+                    aria-pressed={(selectedTextShape.textVerticalAlign ?? (selectedTextShape.kind === "sticky" || selectedTextShape.kind === "text" ? "top" : "middle")) === alignment}
                     title={label}
                     onClick={() => handleTransform(selectedTextShape.id, { textVerticalAlign: alignment as TextVerticalAlign })}
                   ><Icon size={15} /></button>
