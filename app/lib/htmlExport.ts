@@ -70,8 +70,8 @@ function textBlock(
   text = object.text,
   className = "object-text",
 ) {
-  const horizontal: TextAlign = object.textAlign ?? (object.kind === "sticky" ? "left" : "center");
-  const vertical: TextVerticalAlign = object.textVerticalAlign ?? (object.kind === "sticky" ? "top" : "middle");
+  const horizontal: TextAlign = object.textAlign ?? (object.kind === "sticky" || object.kind === "text" ? "left" : "center");
+  const vertical: TextVerticalAlign = object.textVerticalAlign ?? (object.kind === "sticky" || object.kind === "text" ? "top" : "middle");
   return `<foreignObject x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"><div xmlns="http://www.w3.org/1999/xhtml" class="${className} align-${horizontal} valign-${vertical}" style="font-size:${object.fontSize ?? (object.kind === "sticky" ? 17 : 16)}px">${escapeHtml(text)}</div></foreignObject>`;
 }
 
@@ -94,7 +94,9 @@ function renderObject(object: CanvasObject) {
   const stroke = escapeHtml(object.stroke);
   let content = "";
 
-  if (object.kind === "ellipse") {
+  if (object.kind === "text") {
+    content = textBlock(object, { x: 0, y: 0, width: object.width, height: object.height });
+  } else if (object.kind === "ellipse") {
     content = `<ellipse class="object-body" cx="${object.width / 2}" cy="${object.height / 2}" rx="${object.width / 2}" ry="${object.height / 2}" fill="${fill}" stroke="${stroke}"/>${textBlock(object, { x: 16, y: 12, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 24) })}`;
   } else if (object.kind === "process-shape" && object.processShape) {
     const paths = processShapePaths(object.processShape, object.width, object.height);

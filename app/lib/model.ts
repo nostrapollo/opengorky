@@ -5,7 +5,7 @@ import {
   type ProcessShapeKind,
 } from "./processShapes";
 
-export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "rich-card" | "image" | "link" | "gcp-service" | "process-shape";
+export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "text" | "rich-card" | "image" | "link" | "gcp-service" | "process-shape";
 export type TextAlign = "left" | "center" | "right";
 export type TextVerticalAlign = "top" | "middle" | "bottom";
 
@@ -56,7 +56,7 @@ export type CatalogEntry = {
   searchableText: string;
 };
 
-export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "process-shape" | "connector";
+export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "text" | "process-shape" | "connector";
 
 export type Viewport = {
   x: number;
@@ -68,7 +68,7 @@ export type Point = { x: number; y: number };
 
 export type LayerMove = "backward" | "forward" | "back" | "front";
 
-const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "rich-card", "image", "link", "gcp-service", "process-shape"]);
+const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "text", "rich-card", "image", "link", "gcp-service", "process-shape"]);
 const TEXT_ALIGNS = new Set<TextAlign>(["left", "center", "right"]);
 const TEXT_VERTICAL_ALIGNS = new Set<TextVerticalAlign>(["top", "middle", "bottom"]);
 const MAX_DOCUMENT_OBJECTS = 10_000;
@@ -287,6 +287,7 @@ export function addObject(
     rectangle: { width: 190, height: 110, fill: "#eef0ff", stroke: "#6670d9", text: "New idea" },
     ellipse: { width: 180, height: 120, fill: "#e4f8ef", stroke: "#34966a", text: "New idea" },
     sticky: { width: 200, height: 150, fill: "#ffe797", stroke: "#d8ad32", text: "" },
+    text: { width: 260, height: 80, fill: "transparent", stroke: "transparent", text: "" },
     "rich-card": { width: 300, height: 170, fill: "#ffffff", stroke: "#23262f", text: "Rich card\nA live DOM layer on the infinite canvas." },
     image: { width: 320, height: 240, fill: "#ffffff", stroke: "#b9bbc5", text: "Pasted image" },
     link: { width: 320, height: 132, fill: "#ffffff", stroke: "#6670d9", text: "Link" },
@@ -303,6 +304,8 @@ export function addObject(
     ...size,
     ...(kind === "sticky"
       ? { fontSize: 17, textAlign: "left" as const, textVerticalAlign: "top" as const, autoGrow: true }
+      : kind === "text"
+        ? { fontSize: 18, textAlign: "left" as const, textVerticalAlign: "top" as const }
       : kind === "rectangle" || kind === "ellipse" || kind === "process-shape"
         ? { textAlign: "center" as const, textVerticalAlign: "middle" as const }
         : {}),

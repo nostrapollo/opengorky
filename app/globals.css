@@ -646,6 +646,13 @@ select:focus-visible {
   color: rgba(32, 34, 42, 0.42);
 }
 
+.canvas-text-editor.plain-text-editor {
+  border-style: dashed;
+  border-radius: 2px;
+  padding-inline: 0;
+  background: transparent;
+}
+
 .shape-toolbar {
   position: absolute;
   z-index: 14;

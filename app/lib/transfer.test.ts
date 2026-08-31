@@ -123,6 +123,27 @@ describe("canvas import and export", () => {
     expect(imported).toEqual(source);
   });
 
+  it("round-trips plain text and its formatting through export and import", () => {
+    const added = addObject(createBlankDocument("Notes"), "text", 80, 90);
+    const source = updateObject(added.document, added.object.id, {
+      text: "A standalone note",
+      fontSize: 24,
+      textAlign: "right",
+      rotation: -15,
+    });
+    const exported = createCanvasExport(source);
+    const imported = parseCanvasImport(exported.contents, [], { now: () => source.updatedAt });
+
+    expect(imported.objects[0]).toMatchObject({
+      kind: "text",
+      text: "A standalone note",
+      fontSize: 24,
+      textAlign: "right",
+      rotation: -15,
+    });
+    expect(imported).toEqual(source);
+  });
+
   it("round-trips Google Cloud service nodes through export and import", () => {
     const source = addGcpServiceObject(createBlankDocument("GCP plan"), "cloud-sql", 180, 220).document;
     const exported = createCanvasExport(source);

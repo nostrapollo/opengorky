@@ -80,6 +80,25 @@ describe("canvas document model", () => {
     });
   });
 
+  it("creates portable plain text with transparent geometry", () => {
+    const added = addObject(createBlankDocument(), "text", 25, 35);
+
+    expect(added.object).toMatchObject({
+      kind: "text",
+      x: 25,
+      y: 35,
+      width: 260,
+      height: 80,
+      fill: "transparent",
+      stroke: "transparent",
+      text: "",
+      fontSize: 18,
+      textAlign: "left",
+      textVerticalAlign: "top",
+    });
+    expect(isCanvasDocument(JSON.parse(JSON.stringify(added.document)))).toBe(true);
+  });
+
   it("persists horizontal and vertical shape text alignment", () => {
     const added = addObject(createBlankDocument(), "ellipse", 25, 35);
     const updated = updateObject(added.document, added.object.id, {
