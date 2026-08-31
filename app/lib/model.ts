@@ -50,7 +50,7 @@ export type CatalogEntry = {
   searchableText: string;
 };
 
-export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "rich-card" | "connector";
+export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "connector";
 
 export type Viewport = {
   x: number;
@@ -205,7 +205,7 @@ export function createDemoDocument(): CanvasDocument {
     },
     {
       id: cardId,
-      kind: "rich-card",
+      kind: "rectangle",
       x: 270,
       y: 360,
       width: 300,
@@ -213,7 +213,9 @@ export function createDemoDocument(): CanvasDocument {
       rotation: 0,
       fill: "#ffffff",
       stroke: "#23262f",
-      text: "Rich card\nThis DOM object stays sharp, focusable, and editable while the canvas moves beneath it.",
+      text: "Portable by default\nExport a complete canvas as JSON and bring it anywhere.",
+      textAlign: "left",
+      textVerticalAlign: "top",
     },
   ];
   document.connectors = [

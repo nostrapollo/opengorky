@@ -262,7 +262,7 @@ function stagePoint(stage: Konva.Stage) {
   };
 }
 
-const SHAPE_TOOLS: ObjectKind[] = ["rectangle", "ellipse", "sticky", "rich-card"];
+const SHAPE_TOOLS: ObjectKind[] = ["rectangle", "ellipse", "sticky"];
 const MIN_DRAW_SIZE = 8;
 const MIN_OBJECT_WIDTH = 40;
 const MIN_OBJECT_HEIGHT = 30;
