@@ -54,6 +54,7 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 - a searchable local file library with create, duplicate, delete, and navigation
 - autosave to origin-private files (OPFS), with IndexedDB fallback
 - portable JSON import and export
+- self-contained HTML export with SVG rendering, clickable links, and fit/pan/zoom controls
 
 No account or backend is required. Browser data is scoped to the site's origin,
 so exported JSON is the portable backup and interchange format.
