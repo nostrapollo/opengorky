@@ -16,6 +16,7 @@ import {
   Cloud,
   Copy,
   Download,
+  FileCode2,
   FolderOpen,
   Hand,
   LoaderCircle,
@@ -68,6 +69,7 @@ import {
   type ProcessShapeKind,
 } from "../lib/processShapes";
 import { createCanvasExport, importCanvasFile } from "../lib/transfer";
+import { createCanvasHtmlExport } from "../lib/htmlExport";
 import {
   listDocuments,
   loadDocument,
@@ -104,6 +106,19 @@ function ProcessShapePreview({ kind }: { kind: ProcessShapeKind }) {
       </g>
     </svg>
   );
+}
+
+function downloadExport(exported: { contents: string; fileName: string; mimeType: string }) {
+  const blob = new Blob([exported.contents], { type: exported.mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = exported.fileName;
+  anchor.hidden = true;
+  window.document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function formatTime(value: string) {
@@ -736,16 +751,14 @@ export function CanvasWorkspace() {
   const exportDocument = useCallback(() => {
     if (!document) return;
     const exported = createCanvasExport(document);
-    const blob = new Blob([exported.contents], { type: exported.mimeType });
-    const url = URL.createObjectURL(blob);
-    const anchor = window.document.createElement("a");
-    anchor.href = url;
-    anchor.download = exported.fileName;
-    anchor.hidden = true;
-    window.document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadExport(exported);
+    setStatusMessage(`Exported ${exported.fileName}`);
+  }, [document]);
+
+  const exportHtmlDocument = useCallback(() => {
+    if (!document) return;
+    const exported = createCanvasHtmlExport(document);
+    downloadExport(exported);
     setStatusMessage(`Exported ${exported.fileName}`);
   }, [document]);
 
@@ -938,6 +951,7 @@ export function CanvasWorkspace() {
             <span className="eyebrow">File actions</span>
             <button onClick={duplicateFile}><Copy size={15} /> Duplicate</button>
             <button onClick={exportDocument}><Download size={15} /> Export JSON</button>
+            <button onClick={exportHtmlDocument}><FileCode2 size={15} /> Export HTML</button>
             <button onClick={() => importRef.current?.click()}><Upload size={15} /> Import JSON</button>
             <input
               ref={importRef}
