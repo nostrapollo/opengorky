@@ -1178,6 +1178,7 @@ export function CanvasWorkspace() {
               processShape={processShape}
               viewport={viewport}
               selectedIds={selectedIds}
+              editingId={editingId}
               onViewportChange={setViewport}
               onSelect={setSelectedIds}
               onObjectActivate={handleObjectActivate}
