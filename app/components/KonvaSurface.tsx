@@ -112,6 +112,7 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
     shadowOpacity: object.kind === "sticky" ? 0.12 : object.kind === "rich-card" || object.kind === "link" ? 0.08 : object.kind === "gcp-service" ? 0.06 : 0,
     shadowOffsetY: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 6 : object.kind === "gcp-service" ? 3 : 0,
   });
+  processDetail?.visible(false);
   if (body instanceof Konva.Ellipse) {
     body.setAttrs({
       x: object.width / 2,
@@ -831,8 +832,7 @@ export function KonvaSurface({
     if (!scene) return;
     const nodes = selectedIds.flatMap((id) => {
       const node = scene.nodes.get(id);
-      const object = document.objects.find((item) => item.id === id);
-      return node && object?.kind !== "text" ? [node] : [];
+      return node ? [node] : [];
     });
     scene.transformer.nodes(nodes);
     scene.selectionLayer.batchDraw();
