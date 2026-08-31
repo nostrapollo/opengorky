@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addGcpServiceObject, addObject, createBlankDocument, updateObject, type CanvasDocument } from "./model";
+import { addGcpServiceObject, addObject, addProcessShapeObject, createBlankDocument, updateObject, type CanvasDocument } from "./model";
 import {
   CANVAS_EXPORT_MIME_TYPE,
   MAX_CANVAS_IMPORT_BYTES,
@@ -132,6 +132,19 @@ describe("canvas import and export", () => {
       kind: "gcp-service",
       gcpServiceId: "cloud-sql",
       text: "Cloud SQL",
+    });
+    expect(imported).toEqual(source);
+  });
+
+  it("round-trips process diagram symbols through export and import", () => {
+    const source = addProcessShapeObject(createBlankDocument("Process plan"), "decision", 90, 120).document;
+    const exported = createCanvasExport(source);
+    const imported = parseCanvasImport(exported.contents, [], { now: () => source.updatedAt });
+
+    expect(imported.objects[0]).toMatchObject({
+      kind: "process-shape",
+      processShape: "decision",
+      text: "Decision?",
     });
     expect(imported).toEqual(source);
   });

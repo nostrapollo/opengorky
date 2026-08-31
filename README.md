@@ -47,6 +47,7 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 
 - an infinite Konva canvas with middle-drag panning, zoom, selection, resize, rotate, and connectors
 - drag-to-size shape creation in any direction, with live bounds preview
+- a process-diagram palette with process, decision, start/end, data, document, database, subprocess, and manual-operation symbols
 - editable canvas-native shapes, sticky notes, links, images, and service nodes
 - clipboard image paste with native canvas selection, resize, rotation, and persistence
 - a searchable Google Cloud architecture pack with draggable, connectable service nodes

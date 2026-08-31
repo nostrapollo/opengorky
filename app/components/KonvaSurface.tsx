@@ -11,12 +11,18 @@ import type {
 } from "../lib/model";
 import { connectorEndpoints } from "../lib/model";
 import { gcpIconUrl } from "../lib/gcpCatalog";
+import {
+  processShapePaths,
+  processShapeTextInsets,
+  type ProcessShapeKind,
+} from "../lib/processShapes";
 
 type KonvaSurfaceProps = {
   document: CanvasDocument;
   width: number;
   height: number;
   tool: Tool;
+  processShape: ProcessShapeKind;
   viewport: Viewport;
   selectedIds: string[];
   onViewportChange: (viewport: Viewport) => void;
@@ -84,6 +90,7 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   });
 
   const body = group.findOne<Konva.Shape>(".body");
+  const processDetail = group.findOne<Konva.Path>(".process-detail");
   const fold = group.findOne<Konva.Line>(".fold");
   const label = group.findOne<Konva.Text>(".label");
   const cardKicker = group.findOne<Konva.Text>(".card-kicker");
@@ -99,7 +106,6 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
     fill: object.fill,
     stroke: object.kind === "rich-card" ? "rgba(35,38,47,0.12)" : object.stroke,
     strokeWidth: object.kind === "sticky" ? 1.5 : 2,
-    cornerRadius: object.kind === "sticky" ? 6 : object.kind === "image" ? 8 : object.kind === "gcp-service" ? 12 : 16,
     shadowColor: "#15171c",
     shadowBlur: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 12 : object.kind === "gcp-service" ? 8 : 0,
     shadowOpacity: object.kind === "sticky" ? 0.12 : object.kind === "rich-card" || object.kind === "link" ? 0.08 : object.kind === "gcp-service" ? 0.06 : 0,
@@ -112,8 +118,22 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
       radiusX: object.width / 2,
       radiusY: object.height / 2,
     });
+  } else if (body instanceof Konva.Path && object.kind === "process-shape" && object.processShape) {
+    const paths = processShapePaths(object.processShape, object.width, object.height);
+    body.data(paths.body);
+    processDetail?.setAttrs({
+      data: paths.detail,
+      visible: Boolean(paths.detail),
+      stroke: object.stroke,
+      strokeWidth: 2,
+      fillEnabled: false,
+      listening: false,
+    });
   } else {
     body.setAttrs({ width: object.width, height: object.height });
+    if (body instanceof Konva.Rect) {
+      body.cornerRadius(object.kind === "sticky" ? 6 : object.kind === "image" ? 8 : object.kind === "gcp-service" ? 12 : 16);
+    }
   }
 
   fold?.setAttrs({
@@ -122,11 +142,14 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
     fill: "rgba(255,255,255,0.34)",
   });
 
+  const textInsets = object.kind === "process-shape" && object.processShape
+    ? processShapeTextInsets(object.processShape, object.width, object.height)
+    : null;
   label.setAttrs({
-    width: Math.max(24, object.width - 32),
-    height: object.kind === "gcp-service" ? 38 : Math.max(24, object.height - 28),
-    x: object.kind === "gcp-service" ? 10 : 16,
-    y: object.kind === "gcp-service" ? Math.max(70, object.height - 45) : 14,
+    width: textInsets?.width ?? Math.max(24, object.width - 32),
+    height: textInsets?.height ?? (object.kind === "gcp-service" ? 38 : Math.max(24, object.height - 28)),
+    x: textInsets?.x ?? (object.kind === "gcp-service" ? 10 : 16),
+    y: textInsets?.y ?? (object.kind === "gcp-service" ? Math.max(70, object.height - 45) : 14),
     text: object.kind === "image" || object.kind === "rich-card" || object.kind === "link" ? "" : object.text,
     visible: object.kind !== "image" && object.kind !== "rich-card" && object.kind !== "link",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -238,7 +261,10 @@ function makeGroup(object: CanvasObject) {
           radiusX: object.width / 2,
           radiusY: object.height / 2,
         })
+      : object.kind === "process-shape"
+        ? new Konva.Path({ name: "body" })
       : new Konva.Rect({ name: "body" });
+  const processDetail = new Konva.Path({ name: "process-detail", listening: false });
   const label = new Konva.Text({ name: "label", listening: false });
   const fold = new Konva.Line({ name: "fold", closed: true, listening: false });
   const cardKicker = new Konva.Text({ name: "card-kicker", listening: false });
@@ -248,7 +274,7 @@ function makeGroup(object: CanvasObject) {
   const linkButtonLabel = new Konva.Text({ name: "link-button-label", listening: false });
   const gcpIcon = new Konva.Image({ name: "gcp-icon", image: window.document.createElement("canvas"), listening: false });
   const gcpKicker = new Konva.Text({ name: "gcp-kicker", listening: false });
-  group.add(body, fold, label, cardKicker, cardTitle, cardBody, linkButton, linkButtonLabel, gcpIcon, gcpKicker);
+  group.add(body, processDetail, fold, label, cardKicker, cardTitle, cardBody, linkButton, linkButtonLabel, gcpIcon, gcpKicker);
   paintGroup(group, object);
   return group;
 }
@@ -262,7 +288,7 @@ function stagePoint(stage: Konva.Stage) {
   };
 }
 
-const SHAPE_TOOLS: ObjectKind[] = ["rectangle", "ellipse", "sticky"];
+const SHAPE_TOOLS: ObjectKind[] = ["rectangle", "ellipse", "sticky", "process-shape"];
 const MIN_DRAW_SIZE = 8;
 const MIN_OBJECT_WIDTH = 40;
 const MIN_OBJECT_HEIGHT = 30;
@@ -273,9 +299,10 @@ function isPrimaryButton(event: MouseEvent | TouchEvent | PointerEvent) {
 }
 
 function setDraftBounds(
-  shape: Konva.Rect | Konva.Ellipse,
+  shape: Konva.Shape,
   start: { x: number; y: number },
   end: { x: number; y: number },
+  processShape?: ProcessShapeKind,
 ) {
   const x = Math.min(start.x, end.x);
   const y = Math.min(start.y, end.y);
@@ -283,6 +310,8 @@ function setDraftBounds(
   const height = Math.abs(end.y - start.y);
   if (shape instanceof Konva.Ellipse) {
     shape.setAttrs({ x: x + width / 2, y: y + height / 2, radiusX: width / 2, radiusY: height / 2 });
+  } else if (shape instanceof Konva.Path && processShape) {
+    shape.setAttrs({ x, y, data: processShapePaths(processShape, width, height).body });
   } else {
     shape.setAttrs({ x, y, width, height });
   }
@@ -294,6 +323,7 @@ export function KonvaSurface({
   width,
   height,
   tool,
+  processShape,
   viewport,
   selectedIds,
   onViewportChange,
@@ -311,6 +341,7 @@ export function KonvaSurface({
   const documentRef = useRef(document);
   const propsRef = useRef({
     tool,
+    processShape,
     onViewportChange,
     onSelect,
     onObjectActivate,
@@ -324,6 +355,7 @@ export function KonvaSurface({
 
   propsRef.current = {
     tool,
+    processShape,
     onViewportChange,
     onSelect,
     onObjectActivate,
@@ -378,7 +410,8 @@ export function KonvaSurface({
     let middlePanStart: { pointerX: number; pointerY: number; stageX: number; stageY: number } | null = null;
     let draftStart: { x: number; y: number } | null = null;
     let draftKind: ObjectKind | null = null;
-    let draftShape: Konva.Rect | Konva.Ellipse | null = null;
+    let draftProcessShape: ProcessShapeKind | null = null;
+    let draftShape: Konva.Shape | null = null;
     let selectionStart: { x: number; y: number } | null = null;
     let selectionRect: Konva.Rect | null = null;
     let suppressNextClick = false;
@@ -469,16 +502,19 @@ export function KonvaSurface({
       if (!point) return;
       draftStart = point;
       draftKind = currentTool as ObjectKind;
+      draftProcessShape = draftKind === "process-shape" ? propsRef.current.processShape : null;
       draftShape =
         draftKind === "ellipse"
           ? new Konva.Ellipse({ listening: false, radiusX: 0, radiusY: 0 })
+          : draftKind === "process-shape"
+            ? new Konva.Path({ listening: false })
           : new Konva.Rect({ listening: false, cornerRadius: draftKind === "sticky" ? 3 : 14 });
       draftShape.fill("rgba(95, 103, 216, 0.12)");
       draftShape.stroke("#5f67d8");
       draftShape.strokeWidth(2 / stage.scaleX());
       draftShape.dash([8 / stage.scaleX(), 5 / stage.scaleX()]);
       selectionLayer.add(draftShape);
-      setDraftBounds(draftShape, point, point);
+      setDraftBounds(draftShape, point, point, draftProcessShape ?? undefined);
       selectionLayer.batchDraw();
       event.evt.preventDefault();
     });
@@ -509,7 +545,7 @@ export function KonvaSurface({
 
       if (!draftStart || !draftKind || !draftShape) return;
       event.evt.preventDefault();
-      setDraftBounds(draftShape, draftStart, stagePoint(stage) ?? draftStart);
+      setDraftBounds(draftShape, draftStart, stagePoint(stage) ?? draftStart, draftProcessShape ?? undefined);
       selectionLayer.batchDraw();
     });
 
@@ -544,12 +580,13 @@ export function KonvaSurface({
 
       if (!draftStart || !draftKind || !draftShape) return;
       const end = stagePoint(stage) ?? draftStart;
-      const bounds = setDraftBounds(draftShape, draftStart, end);
+      const bounds = setDraftBounds(draftShape, draftStart, end, draftProcessShape ?? undefined);
       draftShape.destroy();
       draftShape = null;
       draftStart = null;
       const kind = draftKind;
       draftKind = null;
+      draftProcessShape = null;
       selectionLayer.batchDraw();
 
       if (bounds.width >= MIN_DRAW_SIZE && bounds.height >= MIN_DRAW_SIZE) {

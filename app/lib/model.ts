@@ -1,6 +1,11 @@
 import { getGcpService } from "./gcpCatalog";
+import {
+  PROCESS_SHAPES,
+  isProcessShapeKind,
+  type ProcessShapeKind,
+} from "./processShapes";
 
-export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "rich-card" | "image" | "link" | "gcp-service";
+export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "rich-card" | "image" | "link" | "gcp-service" | "process-shape";
 export type TextAlign = "left" | "center" | "right";
 export type TextVerticalAlign = "top" | "middle" | "bottom";
 
@@ -22,6 +27,7 @@ export type CanvasObject = {
   imageSrc?: string;
   url?: string;
   gcpServiceId?: string;
+  processShape?: ProcessShapeKind;
 };
 
 export type Connector = {
@@ -50,7 +56,7 @@ export type CatalogEntry = {
   searchableText: string;
 };
 
-export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "connector";
+export type Tool = "select" | "hand" | "rectangle" | "ellipse" | "sticky" | "process-shape" | "connector";
 
 export type Viewport = {
   x: number;
@@ -62,7 +68,7 @@ export type Point = { x: number; y: number };
 
 export type LayerMove = "backward" | "forward" | "back" | "front";
 
-const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "rich-card", "image", "link", "gcp-service"]);
+const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "rich-card", "image", "link", "gcp-service", "process-shape"]);
 const TEXT_ALIGNS = new Set<TextAlign>(["left", "center", "right"]);
 const TEXT_VERTICAL_ALIGNS = new Set<TextVerticalAlign>(["top", "middle", "bottom"]);
 const MAX_DOCUMENT_OBJECTS = 10_000;
@@ -85,6 +91,24 @@ function objectCenter(object: CanvasObject): Point {
   };
 }
 
+function polygonEdgeDistance(direction: Point, points: Point[]) {
+  const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < points.length; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    const segment = { x: end.x - start.x, y: end.y - start.y };
+    const denominator = cross(direction, segment);
+    if (Math.abs(denominator) < 0.0001) continue;
+    const distance = cross(start, segment) / denominator;
+    const segmentOffset = cross(start, direction) / denominator;
+    if (distance >= 0 && segmentOffset >= 0 && segmentOffset <= 1) {
+      nearest = Math.min(nearest, distance);
+    }
+  }
+  return nearest;
+}
+
 function objectEdgePoint(object: CanvasObject, toward: Point): Point {
   const center = objectCenter(object);
   const angle = (object.rotation * Math.PI) / 180;
@@ -96,12 +120,39 @@ function objectEdgePoint(object: CanvasObject, toward: Point): Point {
 
   const halfWidth = Math.max(0.5, object.width / 2);
   const halfHeight = Math.max(0.5, object.height / 2);
-  const distance = object.kind === "ellipse"
+  let distance = object.kind === "ellipse"
     ? 1 / Math.sqrt((localX * localX) / (halfWidth * halfWidth) + (localY * localY) / (halfHeight * halfHeight))
     : Math.min(
       Math.abs(localX) < 0.0001 ? Number.POSITIVE_INFINITY : halfWidth / Math.abs(localX),
       Math.abs(localY) < 0.0001 ? Number.POSITIVE_INFINITY : halfHeight / Math.abs(localY),
     );
+  if (object.kind === "process-shape") {
+    const inset = Math.min(28, object.width * 0.16);
+    const centeredInset = Math.min(24, object.width * 0.14);
+    const polygon = object.processShape === "decision"
+      ? [
+        { x: 0, y: -halfHeight },
+        { x: halfWidth, y: 0 },
+        { x: 0, y: halfHeight },
+        { x: -halfWidth, y: 0 },
+      ]
+      : object.processShape === "data"
+        ? [
+          { x: -halfWidth + inset, y: -halfHeight },
+          { x: halfWidth, y: -halfHeight },
+          { x: halfWidth - inset, y: halfHeight },
+          { x: -halfWidth, y: halfHeight },
+        ]
+        : object.processShape === "manual-operation"
+          ? [
+            { x: -halfWidth, y: -halfHeight },
+            { x: halfWidth, y: -halfHeight },
+            { x: halfWidth - centeredInset, y: halfHeight },
+            { x: -halfWidth + centeredInset, y: halfHeight },
+          ]
+          : null;
+    if (polygon) distance = polygonEdgeDistance({ x: localX, y: localY }, polygon);
+  }
   const edgeX = localX * distance;
   const edgeY = localY * distance;
   return {
@@ -240,6 +291,7 @@ export function addObject(
     image: { width: 320, height: 240, fill: "#ffffff", stroke: "#b9bbc5", text: "Pasted image" },
     link: { width: 320, height: 132, fill: "#ffffff", stroke: "#6670d9", text: "Link" },
     "gcp-service": { width: 156, height: 128, fill: "#ffffff", stroke: "#dadce0", text: "Google Cloud service" },
+    "process-shape": { width: 190, height: 100, fill: "#ffffff", stroke: "#5f67d8", text: "Process" },
   };
   const object: CanvasObject = {
     id: makeId("obj"),
@@ -251,13 +303,36 @@ export function addObject(
     ...size,
     ...(kind === "sticky"
       ? { fontSize: 17, textAlign: "left" as const, textVerticalAlign: "top" as const, autoGrow: true }
-      : kind === "rectangle" || kind === "ellipse"
+      : kind === "rectangle" || kind === "ellipse" || kind === "process-shape"
         ? { textAlign: "center" as const, textVerticalAlign: "middle" as const }
         : {}),
   };
   return {
     object,
     document: touchDocument({ ...document, objects: [...document.objects, object] }),
+  };
+}
+
+export function addProcessShapeObject(
+  document: CanvasDocument,
+  processShape: ProcessShapeKind,
+  x: number,
+  y: number,
+  size?: Pick<CanvasObject, "width" | "height">,
+): { document: CanvasDocument; object: CanvasObject } {
+  const definition = PROCESS_SHAPES.find((shape) => shape.kind === processShape);
+  if (!definition) throw new Error(`Unknown process shape: ${processShape}`);
+  const result = addObject(document, "process-shape", x, y, size ?? {
+    width: definition.width,
+    height: definition.height,
+  });
+  const object = { ...result.object, processShape, text: definition.defaultText };
+  return {
+    object,
+    document: touchDocument({
+      ...result.document,
+      objects: result.document.objects.map((item) => item.id === object.id ? object : item),
+    }),
   };
 }
 
@@ -450,9 +525,11 @@ function isCanvasObject(value: unknown): value is CanvasObject {
   if (value.imageSrc !== undefined && !isImageSource(value.imageSrc)) return false;
   if (value.url !== undefined && !isSafeWebUrl(value.url)) return false;
   if (value.gcpServiceId !== undefined && !isGcpServiceId(value.gcpServiceId)) return false;
+  if (value.processShape !== undefined && !isProcessShapeKind(value.processShape)) return false;
   if (value.kind === "image" && !isImageSource(value.imageSrc)) return false;
   if (value.kind === "link" && !isSafeWebUrl(value.url)) return false;
   if (value.kind === "gcp-service" && !isGcpServiceId(value.gcpServiceId)) return false;
+  if (value.kind === "process-shape" && !isProcessShapeKind(value.processShape)) return false;
   return true;
 }
 

@@ -4,6 +4,7 @@ import {
   addGcpServiceObject,
   addImageObject,
   addLinkObject,
+  addProcessShapeObject,
   createBlankDocument,
   createDemoDocument,
   connectorEndpoints,
@@ -17,6 +18,7 @@ import {
   reorderObject,
   updateObject,
 } from "./model";
+import { PROCESS_SHAPES } from "./processShapes";
 
 describe("canvas document model", () => {
   it("keeps rich cards out of newly seeded canvases", () => {
@@ -201,6 +203,44 @@ describe("canvas document model", () => {
     });
     expect(restored).toEqual(result.document);
     expect(isCanvasDocument(restored)).toBe(true);
+  });
+
+  it("stores every process symbol as a portable native object", () => {
+    let document = createBlankDocument("Process map");
+    for (const [index, definition] of PROCESS_SHAPES.entries()) {
+      document = addProcessShapeObject(document, definition.kind, index * 20, index * 10).document;
+    }
+    const restored = normalizeCanvasDocument(JSON.parse(JSON.stringify(document)));
+
+    expect(restored.objects.map((object) => object.processShape)).toEqual(
+      PROCESS_SHAPES.map((shape) => shape.kind),
+    );
+    expect(restored.objects.every((object) => object.kind === "process-shape")).toBe(true);
+    expect(isCanvasDocument(restored)).toBe(true);
+  });
+
+  it("rejects process objects without a recognized symbol", () => {
+    const added = addObject(createBlankDocument(), "process-shape", 20, 30);
+    expect(isCanvasDocument(added.document)).toBe(false);
+    expect(isCanvasDocument({
+      ...added.document,
+      objects: [{ ...added.object, processShape: "unknown-shape" }],
+    })).toBe(false);
+  });
+
+  it("anchors a connector on the sloped edge of a decision", () => {
+    const decision = addProcessShapeObject(
+      createBlankDocument(),
+      "decision",
+      0,
+      0,
+      { width: 100, height: 100 },
+    );
+    const target = addObject(decision.document, "rectangle", 200, 100, { width: 100, height: 60 });
+    const [start] = connectorEndpoints(decision.object, target.object);
+
+    expect(start.x).toBeCloseTo(85.71, 2);
+    expect(start.y).toBeCloseTo(64.29, 2);
   });
 
   it("rejects Google Cloud objects without a service identity", () => {

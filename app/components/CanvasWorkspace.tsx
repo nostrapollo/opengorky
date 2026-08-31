@@ -38,6 +38,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { KonvaSurface } from "./KonvaSurface";
 import {
   addObject,
+  addProcessShapeObject,
   addGcpServiceObject,
   addImageObject,
   addLinkObject,
@@ -61,6 +62,11 @@ import {
   type LayerMove,
   type Viewport,
 } from "../lib/model";
+import {
+  PROCESS_SHAPES,
+  processShapePaths,
+  type ProcessShapeKind,
+} from "../lib/processShapes";
 import { createCanvasExport, importCanvasFile } from "../lib/transfer";
 import {
   listDocuments,
@@ -87,6 +93,18 @@ const TOOL_ITEMS: Array<{ tool: Tool; label: string; icon: typeof MousePointer2;
   { tool: "sticky", label: "Sticky note", icon: StickyNote, shortcut: "N" },
   { tool: "connector", label: "Connect", icon: ArrowRight, shortcut: "C" },
 ];
+
+function ProcessShapePreview({ kind }: { kind: ProcessShapeKind }) {
+  const paths = processShapePaths(kind, 180, 100);
+  return (
+    <svg viewBox="0 0 200 120" aria-hidden="true">
+      <g transform="translate(10 10)">
+        <path d={paths.body} />
+        {paths.detail && <path className="process-shape-preview-detail" d={paths.detail} />}
+      </g>
+    </svg>
+  );
+}
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -225,6 +243,8 @@ export function CanvasWorkspace() {
   const [query, setQuery] = useState("");
   const [gcpQuery, setGcpQuery] = useState("");
   const [gcpPanelOpen, setGcpPanelOpen] = useState(false);
+  const [processPanelOpen, setProcessPanelOpen] = useState(false);
+  const [processShape, setProcessShape] = useState<ProcessShapeKind>("process");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
@@ -235,6 +255,7 @@ export function CanvasWorkspace() {
   const [statusMessage, setStatusMessage] = useState("Preparing local workspace…");
   const canvasRef = useRef<HTMLDivElement>(null);
   const gcpPackButtonRef = useRef<HTMLButtonElement>(null);
+  const processPackButtonRef = useRef<HTMLButtonElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const lastSavedRef = useRef("");
   const loadedRef = useRef(false);
@@ -352,7 +373,7 @@ export function CanvasWorkspace() {
   const selectedTextShape = useMemo(() => {
     if (selectedIds.length !== 1) return null;
     return document?.objects.find((object) =>
-      object.id === selectedIds[0] && ["rectangle", "ellipse", "sticky"].includes(object.kind),
+      object.id === selectedIds[0] && ["rectangle", "ellipse", "sticky", "process-shape"].includes(object.kind),
     ) ?? null;
   }, [document, selectedIds]);
 
@@ -431,19 +452,16 @@ export function CanvasWorkspace() {
   const handleCreate = useCallback(
     (kind: ObjectKind, x: number, y: number, width?: number, height?: number) => {
       if (!document) return;
-      const result = addObject(
-        document,
-        kind,
-        x,
-        y,
-        width !== undefined && height !== undefined ? { width, height } : undefined,
-      );
+      const size = width !== undefined && height !== undefined ? { width, height } : undefined;
+      const result = kind === "process-shape"
+        ? addProcessShapeObject(document, processShape, x, y, size)
+        : addObject(document, kind, x, y, size);
       commitDocument(result.document);
       setSelectedIds([result.object.id]);
       setTool("select");
       if (kind === "sticky" || kind === "rich-card") setEditingId(result.object.id);
     },
-    [commitDocument, document],
+    [commitDocument, document, processShape],
   );
 
   const placeGcpService = useCallback((serviceId: string, point?: { x: number; y: number }) => {
@@ -673,8 +691,18 @@ export function CanvasWorkspace() {
     window.requestAnimationFrame(() => gcpPackButtonRef.current?.focus());
   }, []);
 
+  const closeProcessPanel = useCallback(() => {
+    setProcessPanelOpen(false);
+    window.requestAnimationFrame(() => processPackButtonRef.current?.focus());
+  }, []);
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && processPanelOpen) {
+        event.preventDefault();
+        closeProcessPanel();
+        return;
+      }
       if (event.key === "Escape" && gcpPanelOpen) {
         event.preventDefault();
         closeGcpPanel();
@@ -703,7 +731,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [closeGcpPanel, deleteSelected, fitAllContent, gcpPanelOpen, selectedIds.length]);
+  }, [closeGcpPanel, closeProcessPanel, deleteSelected, fitAllContent, gcpPanelOpen, processPanelOpen, selectedIds.length]);
 
   const exportDocument = useCallback(() => {
     if (!document) return;
@@ -978,6 +1006,23 @@ export function CanvasWorkspace() {
                   </span>
                 );
               })}
+              <span className="tool-slot tool-with-divider" data-tooltip="Process diagram shapes">
+                <button
+                  ref={processPackButtonRef}
+                  className={`tool-button ${tool === "process-shape" || processPanelOpen ? "active" : ""}`}
+                  aria-label="Process diagram shapes"
+                  aria-expanded={processPanelOpen}
+                  aria-controls="process-shape-pack"
+                  onClick={() => {
+                    setProcessPanelOpen((current) => !current);
+                    setGcpPanelOpen(false);
+                    setConnectorSource(null);
+                    setStatusMessage("Process diagram shapes");
+                  }}
+                >
+                  <Shapes size={18} />
+                </button>
+              </span>
               <span className="tool-slot tool-with-divider" data-tooltip="Google Cloud architecture pack">
                 <button
                   ref={gcpPackButtonRef}
@@ -987,6 +1032,7 @@ export function CanvasWorkspace() {
                   aria-controls="gcp-architecture-pack"
                   onClick={() => {
                     setGcpPanelOpen((current) => !current);
+                    setProcessPanelOpen(false);
                     setConnectorSource(null);
                     setStatusMessage("Google Cloud architecture pack");
                   }}
@@ -995,6 +1041,40 @@ export function CanvasWorkspace() {
                 </button>
               </span>
           </nav>
+
+          {processPanelOpen && (
+            <section id="process-shape-pack" className="process-shape-pack" aria-label="Process diagram shapes">
+              <header className="process-shape-pack-header">
+                <div>
+                  <span className="eyebrow">Shapes</span>
+                  <h2>Process diagrams</h2>
+                </div>
+                <button className="icon-button" aria-label="Close process diagram shapes" onClick={closeProcessPanel}>
+                  <X size={16} />
+                </button>
+              </header>
+              <div className="process-shape-grid">
+                {PROCESS_SHAPES.map((shape) => (
+                  <button
+                    key={shape.kind}
+                    className={processShape === shape.kind ? "selected" : ""}
+                    aria-label={shape.label}
+                    onClick={() => {
+                      setProcessShape(shape.kind);
+                      setProcessPanelOpen(false);
+                      setTool("process-shape");
+                      setConnectorSource(null);
+                      setStatusMessage(`${shape.label}: click or drag to draw`);
+                    }}
+                  >
+                    <ProcessShapePreview kind={shape.kind} />
+                    <span>{shape.label}</span>
+                  </button>
+                ))}
+              </div>
+              <footer>Choose a symbol, then click or drag on the canvas.</footer>
+            </section>
+          )}
 
           {gcpPanelOpen && (
             <section id="gcp-architecture-pack" className="gcp-pack" aria-label="Google Cloud architecture pack">
@@ -1076,6 +1156,7 @@ export function CanvasWorkspace() {
               width={size.width}
               height={size.height}
               tool={tool}
+              processShape={processShape}
               viewport={viewport}
               selectedIds={selectedIds}
               onViewportChange={setViewport}
