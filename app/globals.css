@@ -835,6 +835,94 @@ select:focus-visible {
   color: var(--accent);
 }
 
+.process-shape-pack {
+  position: absolute;
+  z-index: 22;
+  top: 62px;
+  left: 50%;
+  width: min(430px, calc(100% - 28px));
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 60px rgba(27, 29, 36, 0.2);
+}
+
+.process-shape-pack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 16px 11px;
+}
+
+.process-shape-pack-header h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.process-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  border-top: 1px solid var(--soft-line);
+  border-bottom: 1px solid var(--soft-line);
+  padding: 12px;
+}
+
+.process-shape-grid button {
+  min-width: 0;
+  min-height: 94px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--soft-line);
+  border-radius: 9px;
+  padding: 8px 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 9.5px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+
+.process-shape-grid button:hover,
+.process-shape-grid button:focus-visible,
+.process-shape-grid button.selected {
+  outline: 0;
+  border-color: #b9bdea;
+  background: var(--accent-soft);
+  box-shadow: 0 4px 12px rgba(95, 103, 216, 0.1);
+}
+
+.process-shape-grid svg {
+  width: 58px;
+  height: 40px;
+  overflow: visible;
+  fill: #fff;
+  stroke: #5f67d8;
+  stroke-width: 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.process-shape-grid .process-shape-preview-detail {
+  fill: none;
+}
+
+.process-shape-pack footer {
+  padding: 10px 14px 12px;
+  color: var(--muted);
+  font-size: 9.5px;
+  text-align: center;
+}
+
 .gcp-pack {
   position: absolute;
   z-index: 22;
