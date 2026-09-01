@@ -3,7 +3,7 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const outputDirectory = fileURLToPath(new URL("../dist/client/", import.meta.url));
-const basePath = process.argv[2] ?? "";
+const basePath = process.argv[2] ?? process.env.PAGES_BASE_PATH ?? "/opengorky";
 const textExtensions = new Set([".css", ".html", ".js", ".json", ".rsc"]);
 
 if (basePath && (!basePath.startsWith("/") || basePath.endsWith("/"))) {

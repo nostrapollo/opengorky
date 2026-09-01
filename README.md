@@ -5,7 +5,7 @@
 
 A free and open-source, local-first interactive canvas workspace.
 
-**[Try opengorky in your browser](https://nostrapollo.github.io/opengorky/)** —
+**[Try opengorky in your browser](https://opengorky.com/)** —
 no account or backend required.
 
 ![opengorky showing a local-first product map](docs/assets/opengorky-preview.jpg)
