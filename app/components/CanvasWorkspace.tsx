@@ -536,6 +536,11 @@ export function CanvasWorkspace() {
     handleTransform(object.id, { text, ...autoGrowSticky(object, text) });
   }, [handleTransform]);
 
+  const handleCanvasSelect = useCallback((objectIds: string[]) => {
+    setSelectedIds(objectIds);
+    setEditingId((current) => current && !objectIds.includes(current) ? null : current);
+  }, []);
+
   const openLayerMenu = useCallback((objectId: string, x: number, y: number) => {
     setSelectedIds([objectId]);
     setEditingId(null);
@@ -687,9 +692,9 @@ export function CanvasWorkspace() {
         setStatusMessage("Connector created");
         return;
       }
-      setSelectedIds([objectId]);
+      handleCanvasSelect([objectId]);
     },
-    [commitDocument, connectorSource, document, tool],
+    [commitDocument, connectorSource, document, handleCanvasSelect, tool],
   );
 
   const deleteSelected = useCallback(() => {
@@ -1180,7 +1185,7 @@ export function CanvasWorkspace() {
               selectedIds={selectedIds}
               editingId={editingId}
               onViewportChange={setViewport}
-              onSelect={setSelectedIds}
+              onSelect={handleCanvasSelect}
               onObjectActivate={handleObjectActivate}
               onObjectFollow={(objectId) => {
                 const object = document.objects.find((item) => item.id === objectId);
