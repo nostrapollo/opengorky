@@ -33,6 +33,7 @@ Build a spatial workspace for creating and navigating rich visual files:
 - [Proposed MVP scope](docs/research/mvp-scope.md)
 - [Technology stack research](docs/research/tech-stack.md)
 - [Proposed architecture](docs/architecture/overview.md)
+- [Optional server persistence plan](docs/architecture/server-persistence.md)
 
 ## Run the proof of concept
 
@@ -59,8 +60,10 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 
 No account or backend is required. Browser data is scoped to the site's origin,
 so exported JSON is the portable backup and interchange format.
-The hosted build is the same static frontend as the local app; it has no
-application backend. Read the [privacy summary](app/privacy/page.tsx).
+The hosted build is currently the same static frontend as the local app; it has
+no application backend. Optional authenticated server persistence is
+[planned, not implemented](docs/architecture/server-persistence.md). Read the
+[privacy summary](app/privacy/page.tsx).
 
 ## Verify
 

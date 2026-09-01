@@ -11,6 +11,9 @@ The native file and document model are the product core. Rendering, storage,
 search, packaging, and future desktop integration are replaceable adapters.
 
 The app is local-first and single-user. It has no backend in the core topology.
+An authenticated server may be added as an optional persistence adapter without
+becoming a dependency of the editor; see the
+[server persistence plan](server-persistence.md).
 
 ```mermaid
 flowchart LR
@@ -168,6 +171,8 @@ prevents hundreds of iframes/editors from overwhelming layout and memory.
 - user-selected directory where supported
 - future desktop filesystem
 - in-memory tests
+- optional authenticated remote persistence, coordinated only after a local
+  save completes
 
 The save coordinator follows:
 
@@ -308,6 +313,8 @@ they must not replace semantic assertions.
 6. Profile real files before adding a GPU renderer or SQLite.
 7. Evaluate Tauri and Electron through the same platform contract.
 8. Design a plugin boundary only after native object/action schemas stabilize.
+9. Add optional server persistence through the repository boundary without
+   introducing multiplayer or requiring an account for local use.
 
 ## Architecture decisions still open
 
