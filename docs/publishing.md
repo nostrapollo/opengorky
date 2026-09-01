@@ -29,13 +29,13 @@ change public infrastructure.
 
 ## Website and domain
 
-- [ ] Choose and register the canonical domain.
+- [x] Choose and register the canonical domain (`opengorky.com`).
 - [x] Select a static-capable host; core application functionality must not
       depend on a hosted backend.
 - [x] Configure HTTPS on the GitHub Pages hostname and a custom 404.
 - [x] Verify OPFS/IndexedDB persistence, reload, import/export, and link opening
       on the production origin.
-- [ ] Add the canonical domain to repository and deployment metadata.
+- [x] Add the canonical domain to repository and deployment metadata.
 - [x] Configure the GitHub social preview.
 - [x] Publish privacy language that accurately states what remains on-device.
 
