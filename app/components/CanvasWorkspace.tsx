@@ -56,6 +56,7 @@ import {
   updateObject,
   type CanvasDocument,
   type CanvasObject,
+  type BorderStyle,
   type CatalogEntry,
   type ObjectKind,
   type TextAlign,
@@ -175,7 +176,7 @@ function shapeToolbarStyle(
     [0, object.height],
   ].map(([x, y]) => object.y + x * Math.sin(angle) + y * Math.cos(angle));
   const objectTop = viewport.y + Math.min(...corners) * viewport.scale;
-  const estimatedWidth = object.kind === "sticky" ? 490 : object.kind === "text" ? 420 : 250;
+  const estimatedWidth = object.kind === "sticky" ? 650 : object.kind === "text" ? 420 : 410;
   const sideGap = 28;
   const edgeGap = 12;
   const bottom = Math.max(54, objectTop - 12);
@@ -1273,7 +1274,7 @@ export function CanvasWorkspace() {
                   style={{
                     width: object.width,
                     height: object.height,
-                    background: object.fill,
+                    background: object.fillTransparent ? "transparent" : object.fill,
                     fontSize: object.kind === "sticky" ? object.fontSize ?? 17 : object.kind === "text" ? object.fontSize ?? 18 : 17,
                     textAlign: object.textAlign ?? (object.kind === "sticky" || object.kind === "text" ? "left" : "center"),
                     paddingTop: textEditorPaddingTop(object),
@@ -1315,9 +1316,50 @@ export function CanvasWorkspace() {
               <div
                 className="shape-toolbar"
                 role="toolbar"
-                aria-label="Shape text formatting"
+                aria-label="Shape formatting"
                 style={shapeToolbarStyle(selectedTextShape, viewport, size)}
               >
+                {selectedTextShape.kind !== "text" && <>
+                  <label className="shape-color-control" title="Fill color">
+                    <span>Fill</span>
+                    <input
+                      type="color"
+                      aria-label="Shape fill color"
+                      value={selectedTextShape.fill}
+                      onChange={(event) => handleTransform(selectedTextShape.id, { fill: event.target.value })}
+                    />
+                  </label>
+                  <button
+                    className={`shape-transparent-toggle ${selectedTextShape.fillTransparent ? "active" : ""}`}
+                    aria-label={selectedTextShape.fillTransparent ? "Use shape fill" : "Make shape fill transparent"}
+                    aria-pressed={selectedTextShape.fillTransparent ?? false}
+                    title={selectedTextShape.fillTransparent ? "Use fill" : "Transparent fill"}
+                    onClick={() => handleTransform(selectedTextShape.id, { fillTransparent: !selectedTextShape.fillTransparent })}
+                  >No fill</button>
+                  <label className="shape-color-control" title="Border color">
+                    <span>Border</span>
+                    <input
+                      type="color"
+                      aria-label="Shape border color"
+                      value={selectedTextShape.stroke}
+                      disabled={(selectedTextShape.borderStyle ?? "solid") === "none"}
+                      onChange={(event) => handleTransform(selectedTextShape.id, { stroke: event.target.value })}
+                    />
+                  </label>
+                  <select
+                    className="shape-border-style"
+                    aria-label="Shape border style"
+                    title="Border style"
+                    value={selectedTextShape.borderStyle ?? "solid"}
+                    onChange={(event) => handleTransform(selectedTextShape.id, { borderStyle: event.target.value as BorderStyle })}
+                  >
+                    <option value="solid">Solid</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="dotted">Dotted</option>
+                    <option value="none">None</option>
+                  </select>
+                  <span className="shape-toolbar-divider" />
+                </>}
                 {selectedTextShape.kind === "sticky" && <>
                   <div className="sticky-colors" aria-label="Sticky note color">
                     {STICKY_COLORS.map((color) => (

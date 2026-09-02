@@ -113,6 +113,35 @@ describe("canvas document model", () => {
     });
   });
 
+  it("persists fill transparency and border appearance", () => {
+    const added = addObject(createBlankDocument(), "rectangle", 25, 35);
+    const updated = updateObject(added.document, added.object.id, {
+      fill: "#ff3366",
+      fillTransparent: true,
+      stroke: "#123456",
+      borderStyle: "dotted",
+    });
+    const restored = normalizeCanvasDocument(JSON.parse(JSON.stringify(updated)));
+
+    expect(restored.objects[0]).toMatchObject({
+      fill: "#ff3366",
+      fillTransparent: true,
+      stroke: "#123456",
+      borderStyle: "dotted",
+    });
+    expect(isCanvasDocument(restored)).toBe(true);
+  });
+
+  it("rejects unknown border styles in imported canvases", () => {
+    const added = addObject(createBlankDocument(), "ellipse", 25, 35);
+    const invalid = {
+      ...added.document,
+      objects: [{ ...added.object, borderStyle: "double" }],
+    };
+
+    expect(isCanvasDocument(invalid)).toBe(false);
+  });
+
   it("removes legacy object links from saved documents", () => {
     const blank = createBlankDocument();
     const added = addObject(blank, "rectangle", 10, 20);

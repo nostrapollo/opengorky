@@ -85,4 +85,29 @@ describe("standalone HTML canvas export", () => {
 
     expect(exported.contents).toContain('viewBox="-230 -130 210 260"');
   });
+
+  it("renders transparent fills and each portable border style", () => {
+    let document = createBlankDocument("Styled shapes");
+    const transparent = addObject(document, "rectangle", 0, 0);
+    document = updateObject(transparent.document, transparent.object.id, {
+      fill: "#ff3366",
+      fillTransparent: true,
+      stroke: "#123456",
+      borderStyle: "dashed",
+    });
+    const dotted = addObject(document, "ellipse", 220, 0);
+    document = updateObject(dotted.document, dotted.object.id, { borderStyle: "dotted" });
+    const borderless = addObject(document, "process-shape", 440, 0);
+    document = updateObject(borderless.document, borderless.object.id, {
+      processShape: "process",
+      borderStyle: "none",
+    });
+
+    const exported = createCanvasHtmlExport(document);
+
+    expect(exported.contents).toContain('fill="none" stroke="#123456" stroke-dasharray="10 7"');
+    expect(exported.contents).toContain('stroke-dasharray="2 6" stroke-linecap="round"');
+    expect(exported.contents).toContain('kind-process-shape');
+    expect(exported.contents).toContain('stroke="none"');
+  });
 });

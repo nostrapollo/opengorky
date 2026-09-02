@@ -114,6 +114,10 @@ describe("canvas import and export", () => {
       textAlign: "right",
       textVerticalAlign: "bottom",
       rotation: 15,
+      fill: "#ef476f",
+      fillTransparent: true,
+      stroke: "#073b4c",
+      borderStyle: "dashed",
     });
     const exported = createCanvasExport(source);
     const imported = parseCanvasImport(exported.contents, [], {
@@ -121,6 +125,12 @@ describe("canvas import and export", () => {
     });
 
     expect(imported).toEqual(source);
+    expect(imported.objects[0]).toMatchObject({
+      fill: "#ef476f",
+      fillTransparent: true,
+      stroke: "#073b4c",
+      borderStyle: "dashed",
+    });
   });
 
   it("round-trips plain text and its formatting through export and import", () => {
