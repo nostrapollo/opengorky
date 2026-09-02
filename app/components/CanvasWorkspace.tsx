@@ -111,6 +111,29 @@ function ProcessShapePreview({ kind }: { kind: ProcessShapeKind }) {
   );
 }
 
+function BorderStyleIcon({ style }: { style: BorderStyle }) {
+  if (style === "none") {
+    return (
+      <svg viewBox="0 0 24 16" aria-hidden="true">
+        <line x1="3" y1="8" x2="21" y2="8" />
+        <line className="border-icon-slash" x1="6" y1="14" x2="18" y2="2" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 16" aria-hidden="true">
+      <line
+        x1="3"
+        y1="8"
+        x2="21"
+        y2="8"
+        strokeDasharray={style === "dashed" ? "6 4" : style === "dotted" ? "1 4" : undefined}
+        strokeLinecap={style === "dotted" ? "round" : undefined}
+      />
+    </svg>
+  );
+}
+
 function downloadExport(exported: { contents: string; fileName: string; mimeType: string }) {
   const blob = new Blob([exported.contents], { type: exported.mimeType });
   const url = URL.createObjectURL(blob);
@@ -176,7 +199,7 @@ function shapeToolbarStyle(
     [0, object.height],
   ].map(([x, y]) => object.y + x * Math.sin(angle) + y * Math.cos(angle));
   const objectTop = viewport.y + Math.min(...corners) * viewport.scale;
-  const estimatedWidth = object.kind === "sticky" ? 650 : object.kind === "text" ? 420 : 410;
+  const estimatedWidth = object.kind === "sticky" ? 680 : object.kind === "text" ? 420 : 440;
   const sideGap = 28;
   const edgeGap = 12;
   const bottom = Math.max(54, objectTop - 12);
@@ -1346,18 +1369,21 @@ export function CanvasWorkspace() {
                       onChange={(event) => handleTransform(selectedTextShape.id, { stroke: event.target.value })}
                     />
                   </label>
-                  <select
-                    className="shape-border-style"
-                    aria-label="Shape border style"
-                    title="Border style"
-                    value={selectedTextShape.borderStyle ?? "solid"}
-                    onChange={(event) => handleTransform(selectedTextShape.id, { borderStyle: event.target.value as BorderStyle })}
-                  >
-                    <option value="solid">Solid</option>
-                    <option value="dashed">Dashed</option>
-                    <option value="dotted">Dotted</option>
-                    <option value="none">None</option>
-                  </select>
+                  <div className="shape-border-styles" role="group" aria-label="Shape border style">
+                    {(["solid", "dashed", "dotted", "none"] as const).map((borderStyle) => {
+                      const label = borderStyle === "none" ? "No border" : `${borderStyle[0].toUpperCase()}${borderStyle.slice(1)} border`;
+                      return (
+                        <button
+                          key={borderStyle}
+                          className={(selectedTextShape.borderStyle ?? "solid") === borderStyle ? "active" : ""}
+                          aria-label={label}
+                          aria-pressed={(selectedTextShape.borderStyle ?? "solid") === borderStyle}
+                          title={label}
+                          onClick={() => handleTransform(selectedTextShape.id, { borderStyle })}
+                        ><BorderStyleIcon style={borderStyle} /></button>
+                      );
+                    })}
+                  </div>
                   <span className="shape-toolbar-divider" />
                 </>}
                 {selectedTextShape.kind === "sticky" && <>
