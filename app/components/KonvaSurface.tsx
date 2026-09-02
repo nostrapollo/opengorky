@@ -106,8 +106,9 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   if (!body || !label) return;
 
   body.setAttrs({
-    fill: object.fill,
-    fillEnabled: !object.fillTransparent,
+    // A fully transparent fill remains enabled so the shape interior stays in Konva's hit graph.
+    fill: object.fillTransparent ? "rgba(0,0,0,0)" : object.fill,
+    fillEnabled: true,
     stroke: object.kind === "rich-card" ? "rgba(35,38,47,0.12)" : object.stroke,
     strokeEnabled: borderStyle !== "none",
     dash: borderDash,
