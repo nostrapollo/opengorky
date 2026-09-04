@@ -73,6 +73,11 @@ import {
 import { createCanvasExport, importCanvasFile } from "../lib/transfer";
 import { createCanvasHtmlExport } from "../lib/htmlExport";
 import {
+  CANVAS_CLIPBOARD_MIME_TYPE,
+  createCanvasClipboard,
+  pasteCanvasClipboard,
+} from "../lib/clipboard";
+import {
   listDocuments,
   loadDocument,
   removeDocument,
@@ -278,6 +283,7 @@ export function CanvasWorkspace() {
   const [document, setDocument] = useState<CanvasDocument | null>(null);
   const [entries, setEntries] = useState<CatalogEntry[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const pasteSequenceRef = useRef({ contents: "", count: 0 });
   const [tool, setTool] = useState<Tool>("select");
   const [connectorSource, setConnectorSource] = useState<string | null>(null);
   const [viewport, setViewport] = useState<Viewport>({ x: 90, y: 70, scale: 1 });
@@ -658,9 +664,40 @@ export function CanvasWorkspace() {
   }, [commitDocument, document, size.height, size.width, viewport.scale, viewport.x, viewport.y]);
 
   useEffect(() => {
+    const handleCopy = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, [contenteditable='true']")) return;
+      if (!document || selectedIds.length === 0 || !event.clipboardData) return;
+      const contents = createCanvasClipboard(document, selectedIds);
+      if (!contents) return;
+      event.preventDefault();
+      event.clipboardData.setData(CANVAS_CLIPBOARD_MIME_TYPE, contents);
+      pasteSequenceRef.current = { contents, count: 0 };
+      setStatusMessage(`Copied ${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"}`);
+    };
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, [document, selectedIds]);
+
+  useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, textarea, [contenteditable='true']")) return;
+      const objectContents = event.clipboardData?.getData(CANVAS_CLIPBOARD_MIME_TYPE) ?? "";
+      if (objectContents && document) {
+        event.preventDefault();
+        const sequence = pasteSequenceRef.current;
+        const count = sequence.contents === objectContents ? sequence.count + 1 : 1;
+        const result = pasteCanvasClipboard(document, objectContents, count * 24);
+        if (!result) return;
+        pasteSequenceRef.current = { contents: objectContents, count };
+        commitDocument(result.document);
+        setSelectedIds(result.objectIds);
+        setEditingId(null);
+        setTool("select");
+        setStatusMessage(`Pasted ${result.objectIds.length} item${result.objectIds.length === 1 ? "" : "s"}`);
+        return;
+      }
       const files = Array.from(event.clipboardData?.items ?? [])
         .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
         .flatMap((item) => {
@@ -681,7 +718,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [pasteImages, pasteLinks]);
+  }, [commitDocument, document, pasteImages, pasteLinks]);
 
   const handleObjectActivate = useCallback(
     (objectId: string) => {
@@ -759,6 +796,7 @@ export function CanvasWorkspace() {
       const target = event.target as HTMLElement | null;
       const editing = target?.matches("input, textarea, [contenteditable='true']");
       if (editing) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if ((event.key === "Backspace" || event.key === "Delete") && selectedIds.length > 0) {
         event.preventDefault();
         deleteSelected();

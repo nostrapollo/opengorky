@@ -51,6 +51,7 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 - a process-diagram palette with process, decision, start/end, data, document, database, subprocess, and manual-operation symbols
 - editable canvas-native shapes, sticky notes, links, images, and service nodes
 - clipboard image paste with native canvas selection, resize, rotation, and persistence
+- `Cmd/Ctrl+C` and `Cmd/Ctrl+V` for objects, multi-selections, and their internal connectors
 - a searchable Google Cloud architecture pack with draggable, connectable service nodes
 - a searchable local file library with create, duplicate, delete, and navigation
 - autosave to origin-private files (OPFS), with IndexedDB fallback
