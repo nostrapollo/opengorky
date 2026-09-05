@@ -61,7 +61,9 @@ Open `http://localhost:3000`. The POC currently demonstrates:
 No account or backend is required. Browser data is scoped to the site's origin,
 so exported JSON is the portable backup and interchange format.
 The hosted build is the same static frontend as the local app; it has no
-application backend. Read the [privacy summary](app/privacy/page.tsx).
+application backend. Production builds optionally include Cloudflare Web Analytics;
+local builds omit it unless a site token is explicitly provided. Read the
+[privacy summary](app/privacy/page.tsx).
 
 ## Verify
 

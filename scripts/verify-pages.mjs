@@ -4,9 +4,22 @@ import { fileURLToPath } from "node:url";
 
 const outputDirectory = fileURLToPath(new URL("../dist/client/", import.meta.url));
 const requiredFiles = ["index.html", "404.html", "privacy/index.html"];
+const analyticsToken = process.env.CLOUDFLARE_WEB_ANALYTICS_TOKEN?.trim();
 
 for (const file of requiredFiles) {
   await access(join(outputDirectory, file));
+}
+
+if (analyticsToken) {
+  for (const file of requiredFiles) {
+    const html = await readFile(join(outputDirectory, file), "utf8");
+    if (!html.includes("https://static.cloudflareinsights.com/beacon.min.js")) {
+      throw new Error(`Cloudflare Web Analytics beacon is missing from ${file}.`);
+    }
+    if (!html.includes(analyticsToken)) {
+      throw new Error(`Cloudflare Web Analytics token is missing from ${file}.`);
+    }
+  }
 }
 
 async function filesWithExtension(directory, extension) {

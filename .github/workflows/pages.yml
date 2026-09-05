@@ -35,6 +35,7 @@ jobs:
 
       - name: Build static website
         env:
+          CLOUDFLARE_WEB_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_TOKEN }}
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: npm run build:pages
 
