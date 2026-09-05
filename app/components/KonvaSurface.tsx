@@ -98,14 +98,20 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   const cardTitle = group.findOne<Konva.Text>(".card-title");
   const cardBody = group.findOne<Konva.Text>(".card-body");
   const linkButton = group.findOne<Konva.Rect>(".link-button");
+  const borderStyle = object.borderStyle ?? "solid";
+  const borderDash = borderStyle === "dashed" ? [10, 7] : borderStyle === "dotted" ? [2, 6] : [];
   const linkButtonLabel = group.findOne<Konva.Text>(".link-button-label");
   const gcpIcon = group.findOne<Konva.Image>(".gcp-icon");
   const gcpKicker = group.findOne<Konva.Text>(".gcp-kicker");
   if (!body || !label) return;
 
   body.setAttrs({
-    fill: object.fill,
+    // A fully transparent fill remains enabled so the shape interior stays in Konva's hit graph.
+    fill: object.fillTransparent ? "rgba(0,0,0,0)" : object.fill,
+    fillEnabled: true,
     stroke: object.kind === "rich-card" ? "rgba(35,38,47,0.12)" : object.stroke,
+    strokeEnabled: borderStyle !== "none",
+    dash: borderDash,
     strokeWidth: object.kind === "sticky" ? 1.5 : 2,
     shadowColor: "#15171c",
     shadowBlur: object.kind === "sticky" || object.kind === "rich-card" || object.kind === "link" ? 12 : object.kind === "gcp-service" ? 8 : 0,
@@ -128,6 +134,8 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
       visible: Boolean(paths.detail),
       stroke: object.stroke,
       strokeWidth: 2,
+      strokeEnabled: borderStyle !== "none",
+      dash: borderDash,
       fillEnabled: false,
       listening: false,
     });
@@ -139,7 +147,7 @@ function paintGroup(group: Konva.Group, object: CanvasObject) {
   }
 
   fold?.setAttrs({
-    visible: object.kind === "sticky",
+    visible: object.kind === "sticky" && !object.fillTransparent,
     points: [object.width - 20, 0, object.width, 20, object.width, 0],
     fill: "rgba(255,255,255,0.34)",
   });

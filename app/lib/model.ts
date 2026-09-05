@@ -8,6 +8,7 @@ import {
 export type ObjectKind = "rectangle" | "ellipse" | "sticky" | "text" | "rich-card" | "image" | "link" | "gcp-service" | "process-shape";
 export type TextAlign = "left" | "center" | "right";
 export type TextVerticalAlign = "top" | "middle" | "bottom";
+export type BorderStyle = "solid" | "dashed" | "dotted" | "none";
 
 export type CanvasObject = {
   id: string;
@@ -18,7 +19,9 @@ export type CanvasObject = {
   height: number;
   rotation: number;
   fill: string;
+  fillTransparent?: boolean;
   stroke: string;
+  borderStyle?: BorderStyle;
   text: string;
   fontSize?: number;
   textAlign?: TextAlign;
@@ -71,6 +74,7 @@ export type LayerMove = "backward" | "forward" | "back" | "front";
 const OBJECT_KINDS = new Set<ObjectKind>(["rectangle", "ellipse", "sticky", "text", "rich-card", "image", "link", "gcp-service", "process-shape"]);
 const TEXT_ALIGNS = new Set<TextAlign>(["left", "center", "right"]);
 const TEXT_VERTICAL_ALIGNS = new Set<TextVerticalAlign>(["top", "middle", "bottom"]);
+const BORDER_STYLES = new Set<BorderStyle>(["solid", "dashed", "dotted", "none"]);
 const MAX_DOCUMENT_OBJECTS = 10_000;
 const MAX_DOCUMENT_CONNECTORS = 20_000;
 const MAX_IDENTIFIER_LENGTH = 256;
@@ -522,6 +526,8 @@ function isCanvasObject(value: unknown): value is CanvasObject {
   ) return false;
 
   if (value.fontSize !== undefined && !isFiniteNumber(value.fontSize, 512, true)) return false;
+  if (value.fillTransparent !== undefined && typeof value.fillTransparent !== "boolean") return false;
+  if (value.borderStyle !== undefined && !BORDER_STYLES.has(value.borderStyle as BorderStyle)) return false;
   if (value.textAlign !== undefined && !TEXT_ALIGNS.has(value.textAlign as TextAlign)) return false;
   if (value.textVerticalAlign !== undefined && !TEXT_VERTICAL_ALIGNS.has(value.textVerticalAlign as TextVerticalAlign)) return false;
   if (value.autoGrow !== undefined && typeof value.autoGrow !== "boolean") return false;

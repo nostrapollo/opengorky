@@ -90,20 +90,24 @@ function cardContent(object: CanvasObject, link = false) {
 
 function renderObject(object: CanvasObject) {
   const transform = `translate(${object.x} ${object.y}) rotate(${object.rotation})`;
-  const fill = escapeHtml(object.fill);
+  const fill = object.fillTransparent ? "none" : escapeHtml(object.fill);
   const stroke = escapeHtml(object.stroke);
+  const borderStyle = object.borderStyle ?? "solid";
+  const strokeAttributes = borderStyle === "none"
+    ? ' stroke="none"'
+    : ` stroke="${stroke}"${borderStyle === "dashed" ? ' stroke-dasharray="10 7"' : borderStyle === "dotted" ? ' stroke-dasharray="2 6" stroke-linecap="round"' : ""}`;
   let content = "";
 
   if (object.kind === "text") {
     content = textBlock(object, { x: 0, y: 0, width: object.width, height: object.height });
   } else if (object.kind === "ellipse") {
-    content = `<ellipse class="object-body" cx="${object.width / 2}" cy="${object.height / 2}" rx="${object.width / 2}" ry="${object.height / 2}" fill="${fill}" stroke="${stroke}"/>${textBlock(object, { x: 16, y: 12, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 24) })}`;
+    content = `<ellipse class="object-body" cx="${object.width / 2}" cy="${object.height / 2}" rx="${object.width / 2}" ry="${object.height / 2}" fill="${fill}"${strokeAttributes}/>${textBlock(object, { x: 16, y: 12, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 24) })}`;
   } else if (object.kind === "process-shape" && object.processShape) {
     const paths = processShapePaths(object.processShape, object.width, object.height);
     const textBounds = processShapeTextInsets(object.processShape, object.width, object.height);
-    content = `<path class="object-body" d="${paths.body}" fill="${fill}" stroke="${stroke}"/>${paths.detail ? `<path class="shape-detail" d="${paths.detail}" stroke="${stroke}"/>` : ""}${textBlock(object, textBounds)}`;
+    content = `<path class="object-body" d="${paths.body}" fill="${fill}"${strokeAttributes}/>${paths.detail ? `<path class="shape-detail" d="${paths.detail}"${strokeAttributes}/>` : ""}${textBlock(object, textBounds)}`;
   } else if (object.kind === "sticky") {
-    content = `<rect class="object-body sticky-body" width="${object.width}" height="${object.height}" rx="6" fill="${fill}" stroke="${stroke}"/><path class="sticky-fold" d="M ${object.width - 20} 0 L ${object.width} 20 L ${object.width} 0 Z"/>${textBlock(object, { x: 16, y: 14, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 28) })}`;
+    content = `<rect class="object-body sticky-body" width="${object.width}" height="${object.height}" rx="6" fill="${fill}"${strokeAttributes}/><path class="sticky-fold" d="M ${object.width - 20} 0 L ${object.width} 20 L ${object.width} 0 Z"/>${textBlock(object, { x: 16, y: 14, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 28) })}`;
   } else if (object.kind === "image" && object.imageSrc) {
     content = `<rect class="object-body" width="${object.width}" height="${object.height}" rx="8" fill="#fff" stroke="${stroke}"/><image href="${escapeHtml(object.imageSrc)}" width="${object.width}" height="${object.height}" preserveAspectRatio="xMidYMid meet"/>`;
   } else if (object.kind === "link") {
@@ -113,7 +117,7 @@ function renderObject(object: CanvasObject) {
   } else if (object.kind === "gcp-service") {
     content = `<rect class="object-body service-body" width="${object.width}" height="${object.height}" rx="12" fill="${fill}" stroke="${stroke}"/><path class="service-cloud" d="M ${object.width / 2 - 25} 58 C ${object.width / 2 - 31} 42, ${object.width / 2 - 8} 31, ${object.width / 2 + 2} 45 C ${object.width / 2 + 20} 35, ${object.width / 2 + 36} 58, ${object.width / 2 + 19} 68 H ${object.width / 2 - 20} C ${object.width / 2 - 34} 68, ${object.width / 2 - 36} 60, ${object.width / 2 - 25} 58 Z"/><foreignObject x="8" y="8" width="${Math.max(24, object.width - 16)}" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="service-kicker">GOOGLE CLOUD</div></foreignObject>${textBlock(object, { x: 10, y: Math.max(72, object.height - 44), width: Math.max(24, object.width - 20), height: 36 }, object.text, "object-text service-label")}`;
   } else {
-    content = `<rect class="object-body" width="${object.width}" height="${object.height}" rx="16" fill="${fill}" stroke="${stroke}"/>${textBlock(object, { x: 16, y: 14, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 28) })}`;
+    content = `<rect class="object-body" width="${object.width}" height="${object.height}" rx="16" fill="${fill}"${strokeAttributes}/>${textBlock(object, { x: 16, y: 14, width: Math.max(24, object.width - 32), height: Math.max(24, object.height - 28) })}`;
   }
 
   return `<g class="canvas-object kind-${object.kind}" transform="${transform}">${content}</g>`;

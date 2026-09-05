@@ -56,6 +56,7 @@ import {
   updateObject,
   type CanvasDocument,
   type CanvasObject,
+  type BorderStyle,
   type CatalogEntry,
   type ObjectKind,
   type TextAlign,
@@ -71,6 +72,11 @@ import {
 } from "../lib/processShapes";
 import { createCanvasExport, importCanvasFile } from "../lib/transfer";
 import { createCanvasHtmlExport } from "../lib/htmlExport";
+import {
+  CANVAS_CLIPBOARD_MIME_TYPE,
+  createCanvasClipboard,
+  pasteCanvasClipboard,
+} from "../lib/clipboard";
 import {
   listDocuments,
   loadDocument,
@@ -106,6 +112,29 @@ function ProcessShapePreview({ kind }: { kind: ProcessShapeKind }) {
         <path d={paths.body} />
         {paths.detail && <path className="process-shape-preview-detail" d={paths.detail} />}
       </g>
+    </svg>
+  );
+}
+
+function BorderStyleIcon({ style }: { style: BorderStyle }) {
+  if (style === "none") {
+    return (
+      <svg viewBox="0 0 24 16" aria-hidden="true">
+        <line x1="3" y1="8" x2="21" y2="8" />
+        <line className="border-icon-slash" x1="6" y1="14" x2="18" y2="2" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 16" aria-hidden="true">
+      <line
+        x1="3"
+        y1="8"
+        x2="21"
+        y2="8"
+        strokeDasharray={style === "dashed" ? "6 4" : style === "dotted" ? "1 4" : undefined}
+        strokeLinecap={style === "dotted" ? "round" : undefined}
+      />
     </svg>
   );
 }
@@ -175,7 +204,7 @@ function shapeToolbarStyle(
     [0, object.height],
   ].map(([x, y]) => object.y + x * Math.sin(angle) + y * Math.cos(angle));
   const objectTop = viewport.y + Math.min(...corners) * viewport.scale;
-  const estimatedWidth = object.kind === "sticky" ? 490 : object.kind === "text" ? 420 : 250;
+  const estimatedWidth = object.kind === "sticky" ? 680 : object.kind === "text" ? 420 : 440;
   const sideGap = 28;
   const edgeGap = 12;
   const bottom = Math.max(54, objectTop - 12);
@@ -254,6 +283,7 @@ export function CanvasWorkspace() {
   const [document, setDocument] = useState<CanvasDocument | null>(null);
   const [entries, setEntries] = useState<CatalogEntry[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const pasteSequenceRef = useRef({ contents: "", count: 0 });
   const [tool, setTool] = useState<Tool>("select");
   const [connectorSource, setConnectorSource] = useState<string | null>(null);
   const [viewport, setViewport] = useState<Viewport>({ x: 90, y: 70, scale: 1 });
@@ -634,9 +664,40 @@ export function CanvasWorkspace() {
   }, [commitDocument, document, size.height, size.width, viewport.scale, viewport.x, viewport.y]);
 
   useEffect(() => {
+    const handleCopy = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, [contenteditable='true']")) return;
+      if (!document || selectedIds.length === 0 || !event.clipboardData) return;
+      const contents = createCanvasClipboard(document, selectedIds);
+      if (!contents) return;
+      event.preventDefault();
+      event.clipboardData.setData(CANVAS_CLIPBOARD_MIME_TYPE, contents);
+      pasteSequenceRef.current = { contents, count: 0 };
+      setStatusMessage(`Copied ${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"}`);
+    };
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, [document, selectedIds]);
+
+  useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.matches("input, textarea, [contenteditable='true']")) return;
+      const objectContents = event.clipboardData?.getData(CANVAS_CLIPBOARD_MIME_TYPE) ?? "";
+      if (objectContents && document) {
+        event.preventDefault();
+        const sequence = pasteSequenceRef.current;
+        const count = sequence.contents === objectContents ? sequence.count + 1 : 1;
+        const result = pasteCanvasClipboard(document, objectContents, count * 24);
+        if (!result) return;
+        pasteSequenceRef.current = { contents: objectContents, count };
+        commitDocument(result.document);
+        setSelectedIds(result.objectIds);
+        setEditingId(null);
+        setTool("select");
+        setStatusMessage(`Pasted ${result.objectIds.length} item${result.objectIds.length === 1 ? "" : "s"}`);
+        return;
+      }
       const files = Array.from(event.clipboardData?.items ?? [])
         .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
         .flatMap((item) => {
@@ -657,7 +718,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [pasteImages, pasteLinks]);
+  }, [commitDocument, document, pasteImages, pasteLinks]);
 
   const handleObjectActivate = useCallback(
     (objectId: string) => {
@@ -735,6 +796,7 @@ export function CanvasWorkspace() {
       const target = event.target as HTMLElement | null;
       const editing = target?.matches("input, textarea, [contenteditable='true']");
       if (editing) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if ((event.key === "Backspace" || event.key === "Delete") && selectedIds.length > 0) {
         event.preventDefault();
         deleteSelected();
@@ -1273,7 +1335,7 @@ export function CanvasWorkspace() {
                   style={{
                     width: object.width,
                     height: object.height,
-                    background: object.fill,
+                    background: object.fillTransparent ? "transparent" : object.fill,
                     fontSize: object.kind === "sticky" ? object.fontSize ?? 17 : object.kind === "text" ? object.fontSize ?? 18 : 17,
                     textAlign: object.textAlign ?? (object.kind === "sticky" || object.kind === "text" ? "left" : "center"),
                     paddingTop: textEditorPaddingTop(object),
@@ -1315,9 +1377,53 @@ export function CanvasWorkspace() {
               <div
                 className="shape-toolbar"
                 role="toolbar"
-                aria-label="Shape text formatting"
+                aria-label="Shape formatting"
                 style={shapeToolbarStyle(selectedTextShape, viewport, size)}
               >
+                {selectedTextShape.kind !== "text" && <>
+                  <label className="shape-color-control" title="Fill color">
+                    <span>Fill</span>
+                    <input
+                      type="color"
+                      aria-label="Shape fill color"
+                      value={selectedTextShape.fill}
+                      onChange={(event) => handleTransform(selectedTextShape.id, { fill: event.target.value })}
+                    />
+                  </label>
+                  <button
+                    className={`shape-transparent-toggle ${selectedTextShape.fillTransparent ? "active" : ""}`}
+                    aria-label={selectedTextShape.fillTransparent ? "Use shape fill" : "Make shape fill transparent"}
+                    aria-pressed={selectedTextShape.fillTransparent ?? false}
+                    title={selectedTextShape.fillTransparent ? "Use fill" : "Transparent fill"}
+                    onClick={() => handleTransform(selectedTextShape.id, { fillTransparent: !selectedTextShape.fillTransparent })}
+                  >No fill</button>
+                  <label className="shape-color-control" title="Border color">
+                    <span>Border</span>
+                    <input
+                      type="color"
+                      aria-label="Shape border color"
+                      value={selectedTextShape.stroke}
+                      disabled={(selectedTextShape.borderStyle ?? "solid") === "none"}
+                      onChange={(event) => handleTransform(selectedTextShape.id, { stroke: event.target.value })}
+                    />
+                  </label>
+                  <div className="shape-border-styles" role="group" aria-label="Shape border style">
+                    {(["solid", "dashed", "dotted", "none"] as const).map((borderStyle) => {
+                      const label = borderStyle === "none" ? "No border" : `${borderStyle[0].toUpperCase()}${borderStyle.slice(1)} border`;
+                      return (
+                        <button
+                          key={borderStyle}
+                          className={(selectedTextShape.borderStyle ?? "solid") === borderStyle ? "active" : ""}
+                          aria-label={label}
+                          aria-pressed={(selectedTextShape.borderStyle ?? "solid") === borderStyle}
+                          title={label}
+                          onClick={() => handleTransform(selectedTextShape.id, { borderStyle })}
+                        ><BorderStyleIcon style={borderStyle} /></button>
+                      );
+                    })}
+                  </div>
+                  <span className="shape-toolbar-divider" />
+                </>}
                 {selectedTextShape.kind === "sticky" && <>
                   <div className="sticky-colors" aria-label="Sticky note color">
                     {STICKY_COLORS.map((color) => (

@@ -6,7 +6,7 @@ export default function PrivacyPage() {
       <article>
         <p className="eyebrow">opengorky</p>
         <h1>Privacy</h1>
-        <p className="document-updated">Effective August 27, 2026</p>
+        <p className="document-updated">Effective September 4, 2026</p>
 
         <h2>Your canvas data stays in your browser</h2>
         <p>
@@ -19,6 +19,15 @@ export default function PrivacyPage() {
         <p>
           Exporting a canvas creates a JSON file that you control. Importing reads the file
           in your browser. You decide where exported files are stored and who receives them.
+        </p>
+
+        <h2>Privacy-first site analytics</h2>
+        <p>
+          The hosted website uses Cloudflare Web Analytics to measure aggregate page
+          views, visits, and performance. It does not use cookies or local storage for
+          analytics, and opengorky never sends canvas content, pasted images, or saved
+          files to Cloudflare. Local development builds do not enable the analytics
+          beacon.
         </p>
 
         <h2>Hosting and external links</h2>
