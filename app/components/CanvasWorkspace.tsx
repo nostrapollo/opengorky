@@ -78,6 +78,12 @@ import {
   pasteCanvasClipboard,
 } from "../lib/clipboard";
 import {
+  documentContentChanged,
+  isUndoShortcut,
+  popUndoSnapshot,
+  pushUndoSnapshot,
+} from "../lib/history";
+import {
   listDocuments,
   loadDocument,
   removeDocument,
@@ -308,7 +314,37 @@ export function CanvasWorkspace() {
   const importRef = useRef<HTMLInputElement>(null);
   const lastSavedRef = useRef("");
   const loadedRef = useRef(false);
+  const documentRef = useRef<CanvasDocument | null>(null);
+  const undoStackRef = useRef<CanvasDocument[]>([]);
+  const editSnapshotRef = useRef<CanvasDocument | null>(null);
   const workspaceReady = document !== null;
+
+  const replaceDocument = useCallback((next: CanvasDocument) => {
+    documentRef.current = next;
+    setDocument(next);
+  }, []);
+
+  const updateDocument = useCallback((update: (current: CanvasDocument) => CanvasDocument) => {
+    const current = documentRef.current;
+    if (!current) return;
+    const next = update(current);
+    const snapshot = editSnapshotRef.current;
+    if (snapshot && documentContentChanged(snapshot, next)) {
+      undoStackRef.current = pushUndoSnapshot(undoStackRef.current, snapshot);
+      editSnapshotRef.current = null;
+    }
+    replaceDocument(next);
+  }, [replaceDocument]);
+
+  const beginDocumentEdit = useCallback(() => {
+    if (!editSnapshotRef.current && documentRef.current) {
+      editSnapshotRef.current = documentRef.current;
+    }
+  }, []);
+
+  const finishDocumentEdit = useCallback(() => {
+    editSnapshotRef.current = null;
+  }, []);
 
   const refreshEntries = useCallback(async () => {
     const next = await listDocuments();
@@ -321,6 +357,9 @@ export function CanvasWorkspace() {
     const next = await loadDocument(fileId);
     lastSavedRef.current = JSON.stringify(next);
     loadedRef.current = true;
+    documentRef.current = next;
+    undoStackRef.current = [];
+    editSnapshotRef.current = null;
     setDocument(next);
     setSelectedIds([]);
     setConnectorSource(null);
@@ -427,8 +466,32 @@ export function CanvasWorkspace() {
   }, [document, selectedIds]);
 
   const commitDocument = useCallback((next: CanvasDocument) => {
-    setDocument(next);
-  }, []);
+    const current = documentRef.current;
+    editSnapshotRef.current = null;
+    if (current && current.id === next.id && documentContentChanged(current, next)) {
+      undoStackRef.current = pushUndoSnapshot(undoStackRef.current, current);
+    }
+    replaceDocument(next);
+  }, [replaceDocument]);
+
+  const undoDocument = useCallback(() => {
+    finishDocumentEdit();
+    const current = documentRef.current;
+    const result = popUndoSnapshot(undoStackRef.current);
+    if (!current || !result) {
+      setStatusMessage("Nothing to undo");
+      return;
+    }
+    undoStackRef.current = result.history;
+    const restored = touchDocument(structuredClone(result.snapshot));
+    replaceDocument(restored);
+    const activeIds = new Set(restored.objects.map((object) => object.id));
+    setSelectedIds((ids) => ids.filter((id) => activeIds.has(id)));
+    setEditingId(null);
+    setConnectorSource(null);
+    setLayerMenu(null);
+    setStatusMessage("Undid last change");
+  }, [finishDocumentEdit, replaceDocument]);
 
   const createFile = useCallback(async () => {
     const next = createBlankDocument(`Untitled canvas ${entries.length + 1}`);
@@ -461,8 +524,8 @@ export function CanvasWorkspace() {
   }, [document, entries, openFile, refreshEntries]);
 
   const renameDocument = useCallback((title: string) => {
-    setDocument((current) => (current ? touchDocument({ ...current, title }) : current));
-  }, []);
+    updateDocument((current) => touchDocument({ ...current, title }));
+  }, [updateDocument]);
 
   const renameSavedFile = useCallback(
     async (fileId: string, title: string) => {
@@ -473,7 +536,7 @@ export function CanvasWorkspace() {
       await saveDocument(next);
       if (document?.id === fileId) {
         lastSavedRef.current = JSON.stringify(next);
-        setDocument(next);
+        commitDocument(next);
       }
       setEntries((current) =>
         [documentToCatalog(next), ...current.filter((entry) => entry.id !== fileId)].sort((a, b) =>
@@ -482,7 +545,7 @@ export function CanvasWorkspace() {
       );
       setStatusMessage(`Renamed canvas to ${trimmed}`);
     },
-    [document],
+    [commitDocument, document],
   );
 
   const finishFileRename = useCallback(() => {
@@ -508,9 +571,12 @@ export function CanvasWorkspace() {
       commitDocument(result.document);
       setSelectedIds([result.object.id]);
       setTool("select");
-      if (kind === "sticky" || kind === "text" || kind === "rich-card") setEditingId(result.object.id);
+      if (kind === "sticky" || kind === "text" || kind === "rich-card") {
+        beginDocumentEdit();
+        setEditingId(result.object.id);
+      }
     },
-    [commitDocument, document, processShape],
+    [beginDocumentEdit, commitDocument, document, processShape],
   );
 
   const placeGcpService = useCallback((serviceId: string, point?: { x: number; y: number }) => {
@@ -544,14 +610,22 @@ export function CanvasWorkspace() {
 
   const handleTransform = useCallback(
     (objectId: string, patch: Partial<CanvasObject>) => {
-      setDocument((current) => (current ? updateObject(current, objectId, patch) : current));
+      const current = documentRef.current;
+      if (current) commitDocument(updateObject(current, objectId, patch));
     },
-    [],
+    [commitDocument],
+  );
+
+  const handleLiveTransform = useCallback(
+    (objectId: string, patch: Partial<CanvasObject>) => {
+      updateDocument((current) => updateObject(current, objectId, patch));
+    },
+    [updateDocument],
   );
 
   const duplicateDuringDrag = useCallback((objectId: string, offset?: { x: number; y: number }) => {
-    setDocument((current) => current ? duplicateObject(current, objectId, offset)?.document ?? current : current);
-  }, []);
+    updateDocument((current) => duplicateObject(current, objectId, offset)?.document ?? current);
+  }, [updateDocument]);
 
   const duplicateSelectedObject = useCallback(() => {
     if (!document || selectedIds.length !== 1) return;
@@ -563,8 +637,8 @@ export function CanvasWorkspace() {
   }, [commitDocument, document, selectedIds]);
 
   const handleObjectTextChange = useCallback((object: CanvasObject, text: string) => {
-    handleTransform(object.id, { text, ...autoGrowSticky(object, text) });
-  }, [handleTransform]);
+    handleLiveTransform(object.id, { text, ...autoGrowSticky(object, text) });
+  }, [handleLiveTransform]);
 
   const handleCanvasSelect = useCallback((objectIds: string[]) => {
     setSelectedIds(objectIds);
@@ -583,7 +657,8 @@ export function CanvasWorkspace() {
 
   const moveObjectLayer = useCallback((move: LayerMove) => {
     if (!layerMenu) return;
-    setDocument((current) => current ? reorderObject(current, layerMenu.objectId, move) : current);
+    const current = documentRef.current;
+    if (current) commitDocument(reorderObject(current, layerMenu.objectId, move));
     setLayerMenu(null);
     setStatusMessage(
       move === "front" ? "Brought object to front"
@@ -591,7 +666,7 @@ export function CanvasWorkspace() {
           : move === "backward" ? "Sent object backward"
             : "Sent object to back",
     );
-  }, [layerMenu]);
+  }, [commitDocument, layerMenu]);
 
   useEffect(() => {
     if (!layerMenu) return;
@@ -796,6 +871,11 @@ export function CanvasWorkspace() {
       const target = event.target as HTMLElement | null;
       const editing = target?.matches("input, textarea, [contenteditable='true']");
       if (editing) return;
+      if (isUndoShortcut(event)) {
+        event.preventDefault();
+        undoDocument();
+        return;
+      }
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if ((event.key === "Backspace" || event.key === "Delete") && selectedIds.length > 0) {
         event.preventDefault();
@@ -818,7 +898,7 @@ export function CanvasWorkspace() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [closeGcpPanel, closeProcessPanel, deleteSelected, fitAllContent, gcpPanelOpen, processPanelOpen, selectedIds.length]);
+  }, [closeGcpPanel, closeProcessPanel, deleteSelected, fitAllContent, gcpPanelOpen, processPanelOpen, selectedIds.length, undoDocument]);
 
   const exportDocument = useCallback(() => {
     if (!document) return;
@@ -876,10 +956,11 @@ export function CanvasWorkspace() {
       if (event.button !== 0) return;
       if (tool !== "select" || (event.target as HTMLElement).closest("button, textarea")) return;
       event.preventDefault();
+      beginDocumentEdit();
       setSelectedIds([object.id]);
       const start = { x: event.clientX, y: event.clientY, objectX: object.x, objectY: object.y };
       const move = (moveEvent: PointerEvent) => {
-        handleTransform(object.id, {
+        handleLiveTransform(object.id, {
           x: start.objectX + (moveEvent.clientX - start.x) / viewport.scale,
           y: start.objectY + (moveEvent.clientY - start.y) / viewport.scale,
         });
@@ -887,11 +968,12 @@ export function CanvasWorkspace() {
       const up = () => {
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
+        finishDocumentEdit();
       };
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
     },
-    [handleTransform, startMiddleViewportPan, tool, viewport.scale],
+    [beginDocumentEdit, finishDocumentEdit, handleLiveTransform, startMiddleViewportPan, tool, viewport.scale],
   );
 
   const protectStorage = useCallback(async () => {
@@ -928,7 +1010,9 @@ export function CanvasWorkspace() {
           <input
             aria-label="Canvas title"
             value={document.title}
+            onFocus={beginDocumentEdit}
             onChange={(event) => renameDocument(event.target.value)}
+            onBlur={finishDocumentEdit}
           />
           <div className={`save-indicator ${saveState}`}>
             {saveState === "saving" && <LoaderCircle className="spin" size={13} />}
@@ -1262,12 +1346,15 @@ export function CanvasWorkspace() {
                   window.open(object.url, "_blank", "noopener,noreferrer");
                   setStatusMessage(`Opened ${new URL(object.url).hostname}`);
                 } else if (object?.kind !== "image") {
+                  beginDocumentEdit();
                   setEditingId(objectId);
                 }
               }}
               onObjectContextMenu={openLayerMenu}
               onCreate={handleCreate}
-              onTransform={handleTransform}
+              onTransformStart={beginDocumentEdit}
+              onTransform={handleLiveTransform}
+              onTransformEnd={finishDocumentEdit}
               onDuplicate={duplicateDuringDrag}
             />
 
@@ -1292,6 +1379,7 @@ export function CanvasWorkspace() {
                     }}
                     onDoubleClick={() => {
                       setSelectedIds([object.id]);
+                      beginDocumentEdit();
                       setEditingId(object.id);
                     }}
                     onContextMenu={(event) => {
@@ -1306,8 +1394,11 @@ export function CanvasWorkspace() {
                         autoFocus
                         value={object.text}
                         aria-label="Rich card text"
-                        onChange={(event) => handleTransform(object.id, { text: event.target.value })}
-                        onBlur={() => setEditingId(null)}
+                        onChange={(event) => handleLiveTransform(object.id, { text: event.target.value })}
+                        onBlur={() => {
+                          finishDocumentEdit();
+                          setEditingId(null);
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === "Escape") {
                             setEditingId(null);
@@ -1349,9 +1440,10 @@ export function CanvasWorkspace() {
                   }}
                   onBlur={() => {
                     if (object.kind === "text" && !object.text.trim()) {
-                      setDocument((current) => current ? deleteObjects(current, [object.id]) : current);
+                      updateDocument((current) => deleteObjects(current, [object.id]));
                       setSelectedIds([]);
                     }
+                    finishDocumentEdit();
                     setEditingId(null);
                   }}
                   onKeyDown={(event) => {
@@ -1362,9 +1454,10 @@ export function CanvasWorkspace() {
                     }
                     if (event.key === "Escape") {
                       if ((object.kind === "sticky" || object.kind === "text") && !object.text.trim()) {
-                        setDocument((current) => current ? deleteObjects(current, [object.id]) : current);
+                        updateDocument((current) => deleteObjects(current, [object.id]));
                         setSelectedIds([]);
                       }
+                      finishDocumentEdit();
                       setEditingId(null);
                       event.currentTarget.blur();
                     }
