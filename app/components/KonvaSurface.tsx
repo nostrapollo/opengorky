@@ -33,7 +33,9 @@ type KonvaSurfaceProps = {
   onObjectDoubleClick: (objectId: string) => void;
   onObjectContextMenu: (objectId: string, x: number, y: number) => void;
   onCreate: (kind: ObjectKind, x: number, y: number, width?: number, height?: number) => void;
+  onTransformStart: () => void;
   onTransform: (objectId: string, patch: Partial<CanvasObject>) => void;
+  onTransformEnd: () => void;
   onDuplicate: (objectId: string, offset?: { x: number; y: number }) => void;
 };
 
@@ -345,7 +347,9 @@ export function KonvaSurface({
   onObjectDoubleClick,
   onObjectContextMenu,
   onCreate,
+  onTransformStart,
   onTransform,
+  onTransformEnd,
   onDuplicate,
 }: KonvaSurfaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -361,7 +365,9 @@ export function KonvaSurface({
     onObjectDoubleClick,
     onObjectContextMenu,
     onCreate,
+    onTransformStart,
     onTransform,
+    onTransformEnd,
     onDuplicate,
   });
 
@@ -375,7 +381,9 @@ export function KonvaSurface({
     onObjectDoubleClick,
     onObjectContextMenu,
     onCreate,
+    onTransformStart,
     onTransform,
+    onTransformEnd,
     onDuplicate,
   };
   documentRef.current = document;
@@ -742,8 +750,10 @@ export function KonvaSurface({
               y: duplicateOrigin.y - group!.y(),
             });
           }
+          propsRef.current.onTransformEnd();
         });
         group.on("dragstart", (event) => {
+          propsRef.current.onTransformStart();
           scene.stage.setAttr("objectDragging", true);
           scene.stage.container().style.cursor = "grabbing";
           if ("altKey" in event.evt && event.evt.altKey) {
@@ -774,8 +784,12 @@ export function KonvaSurface({
           if (activeScene) updateConnectorPositions(activeScene, documentRef.current, group!.id());
           propsRef.current.onTransform(group!.id(), next);
         };
+        group.on("transformstart", () => propsRef.current.onTransformStart());
         group.on("transform", syncTransformGeometry);
-        group.on("transformend", syncTransformGeometry);
+        group.on("transformend", () => {
+          syncTransformGeometry();
+          propsRef.current.onTransformEnd();
+        });
       }
       paintGroup(group, object);
       group.findOne<Konva.Text>(".label")?.visible(object.id !== editingId);
