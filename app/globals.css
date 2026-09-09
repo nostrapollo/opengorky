@@ -537,6 +537,8 @@ select:focus-visible {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
   background: #f8f8f5;
 }
 
