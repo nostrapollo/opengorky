@@ -45,7 +45,7 @@ npm run dev
 
 Open `http://localhost:3000`. The POC currently demonstrates:
 
-- an infinite Konva canvas with middle-drag panning, zoom, selection, resize, rotate, and connectors
+- an infinite Konva canvas with two-finger trackpad panning, pinch-to-zoom, middle-drag panning, selection, resize, rotate, and connectors
 - drag-to-size shape creation in any direction, with live bounds preview
 - a click-to-type text tool with font sizing, alignment, movement, and export support
 - a process-diagram palette with process, decision, start/end, data, document, database, subprocess, and manual-operation symbols

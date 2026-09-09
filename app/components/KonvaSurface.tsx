@@ -16,6 +16,7 @@ import {
   processShapeTextInsets,
   type ProcessShapeKind,
 } from "../lib/processShapes";
+import { navigateViewportWithWheel } from "../lib/viewportNavigation";
 
 type KonvaSurfaceProps = {
   document: CanvasDocument;
@@ -450,18 +451,25 @@ export function KonvaSurface({
       event.evt.preventDefault();
       const pointer = stage.getPointerPosition();
       if (!pointer) return;
-      const oldScale = stage.scaleX();
-      const world = {
-        x: (pointer.x - stage.x()) / oldScale,
-        y: (pointer.y - stage.y()) / oldScale,
-      };
-      const direction = event.evt.deltaY > 0 ? -1 : 1;
-      const nextScale = Math.min(3, Math.max(0.18, oldScale * (direction > 0 ? 1.08 : 1 / 1.08)));
-      propsRef.current.onViewportChange({
-        scale: nextScale,
-        x: pointer.x - world.x * nextScale,
-        y: pointer.y - world.y * nextScale,
+      const nextViewport = navigateViewportWithWheel({
+        x: stage.x(),
+        y: stage.y(),
+        scale: stage.scaleX(),
+      }, {
+        deltaX: event.evt.deltaX,
+        deltaY: event.evt.deltaY,
+        deltaMode: event.evt.deltaMode,
+        ctrlKey: event.evt.ctrlKey,
+        metaKey: event.evt.metaKey,
+        shiftKey: event.evt.shiftKey,
+        pointer,
+        viewportWidth: stage.width(),
+        viewportHeight: stage.height(),
       });
+      stage.position({ x: nextViewport.x, y: nextViewport.y });
+      stage.scale({ x: nextViewport.scale, y: nextViewport.scale });
+      stage.batchDraw();
+      propsRef.current.onViewportChange(nextViewport);
     });
 
     stage.on("dragmove", (event) => {
